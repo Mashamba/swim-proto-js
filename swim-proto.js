@@ -9,12 +9,13 @@ function decode(record) {
     case 'event': return EventMessage.decode(record);
     case 'command': return CommandMessage.decode(record);
     case 'send': return SendMessage.decode(record);
+    case 'get': return GetRequest.decode(record);
+    case 'put': return PutRequest.decode(record);
+    case 'state': return StateResponse.decode(record);
     case 'link': return LinkRequest.decode(record);
     case 'linked': return LinkedResponse.decode(record);
     case 'unlink': return UnlinkRequest.decode(record);
     case 'unlinked': return UnlinkedResponse.decode(record);
-    case 'get': return GetRequest.decode(record);
-    case 'put': return PutRequest.decode(record);
   }
 }
 
@@ -28,12 +29,13 @@ Object.defineProperty(Envelope.prototype, 'isCommandMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isSendMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isSendEventMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isSendCommandMessage', {value: false});
+Object.defineProperty(Envelope.prototype, 'isGetRequest', {value: false});
+Object.defineProperty(Envelope.prototype, 'isPutRequest', {value: false});
+Object.defineProperty(Envelope.prototype, 'isStateResponse', {value: false});
 Object.defineProperty(Envelope.prototype, 'isLinkRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isLinkedResponse', {value: false});
 Object.defineProperty(Envelope.prototype, 'isUnlinkRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isUnlinkedResponse', {value: false});
-Object.defineProperty(Envelope.prototype, 'isGetRequest', {value: false});
-Object.defineProperty(Envelope.prototype, 'isPutRequest', {value: false});
 
 
 function RequestEnvelope() {
@@ -60,12 +62,11 @@ MessageEnvelope.prototype.constructor = MessageEnvelope;
 Object.defineProperty(RequestEnvelope.prototype, 'isMessage', {value: true});
 
 
-function EventMessage(channel, via, node, lane, body) {
+function EventMessage(node, lane, via, body) {
   MessageEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'via', {enumerable: true, value: via || recon.absent});
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
   Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
+  Object.defineProperty(this, 'via', {enumerable: true, value: via || recon.absent});
   Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
 }
 EventMessage.prototype = Object.create(MessageEnvelope.prototype);
@@ -73,41 +74,47 @@ EventMessage.prototype.constructor = EventMessage;
 Object.defineProperty(EventMessage.prototype, 'isEventMessage', {value: true});
 EventMessage.prototype.encode = function () {
   var builder = recon.builder();
-  builder.attr('event', this.channel);
-  if (!this.via.isAbsent) builder.attr('via', this.via);
-  builder.attr('node', this.node);
-  builder.attr('lane', this.lane);
+  var heading = recon.builder();
+  heading.slot('node', this.node);
+  heading.slot('lane', this.lane);
+  if (!this.via.isAbsent) heading.slot('via', this.via);
+  builder.attr('event', heading.state());
   builder.appendRecord(this.body);
   return builder.state();
 };
 EventMessage.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
+  var node = '';
+  var lane = '';
   var via = recon.absent;
-  var node = recon.absent;
-  var lane = recon.absent;
-  header: while (!items.isEmpty()) {
-    var item = items.head();
-    switch (item.key) {
-      case 'event': channel = item.value; break;
-      case 'via': via = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-      default: break header;
+  var body = record.tail();
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+        case 'via': via = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+        case 2: via = header; break;
+      }
+      i += 1;
     }
-    items.step();
   }
-  var body = items.toRecord();
-  return new EventMessage(channel, via, node, lane, body);
+  return new EventMessage(node, lane, via, body);
 };
 
 
-function CommandMessage(channel, via, node, lane, body) {
+function CommandMessage(node, lane, via, body) {
   MessageEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'via', {enumerable: true, value: via || recon.absent});
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
   Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
+  Object.defineProperty(this, 'via', {enumerable: true, value: via || recon.absent});
   Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
 }
 CommandMessage.prototype = Object.create(MessageEnvelope.prototype);
@@ -115,32 +122,39 @@ CommandMessage.prototype.constructor = CommandMessage;
 Object.defineProperty(CommandMessage.prototype, 'isCommandMessage', {value: true});
 CommandMessage.prototype.encode = function () {
   var builder = recon.builder();
-  builder.attr('command', this.channel);
-  if (!this.via.isAbsent) builder.attr('via', this.via);
-  builder.attr('node', this.node);
-  builder.attr('lane', this.lane);
+  var heading = recon.builder();
+  heading.slot('node', this.node);
+  heading.slot('lane', this.lane);
+  if (!this.via.isAbsent) heading.slot('via', this.via);
+  builder.attr('command', heading.state());
   builder.appendRecord(this.body);
   return builder.state();
 };
 CommandMessage.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
+  var node = '';
+  var lane = '';
   var via = recon.absent;
-  var node = recon.absent;
-  var lane = recon.absent;
-  header: while (!items.isEmpty()) {
-    var item = items.head();
-    switch (item.key) {
-      case 'command': channel = item.value; break;
-      case 'via': via = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-      default: break header;
+  var body = record.tail();
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+        case 'via': via = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+        case 2: via = header; break;
+      }
+      i += 1;
     }
-    items.step();
   }
-  var body = items.toRecord();
-  return new CommandMessage(channel, via, node, lane, body);
+  return new CommandMessage(node, lane, via, body);
 };
 
 
@@ -151,17 +165,16 @@ SendMessage.prototype = Object.create(MessageEnvelope.prototype);
 SendMessage.prototype.constructor = SendMessage;
 Object.defineProperty(SendMessage.prototype, 'isSendMessage', {value: true});
 SendMessage.decode = function (record) {
-  switch (record(1).key) {
+  var heading = record(1);
+  switch (heading.key) {
     case 'event': return SendEventMessage.decode(record);
     case 'command': return SendCommandMessage.decode(record);
   }
 };
 
 
-function SendEventMessage(channel, via, node, lane, body) {
+function SendEventMessage(node, lane, body) {
   SendMessage.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'via', {enumerable: true, value: via || recon.absent});
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
   Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
   Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
@@ -172,40 +185,41 @@ Object.defineProperty(SendEventMessage.prototype, 'isSendEventMessage', {value: 
 SendEventMessage.prototype.encode = function () {
   var builder = recon.builder();
   builder.attr('send');
-  builder.attr('event', this.channel);
-  if (!this.via.isAbsent) builder.attr('via', this.via);
-  builder.attr('node', this.node);
-  builder.attr('lane', this.lane);
+  builder.attr('event', recon(
+    recon.slot('node', this.node),
+    recon.slot('lane', this.lane)));
   builder.appendRecord(this.body);
   return builder.state();
 };
 SendEventMessage.decode = function (record) {
+  var node = '';
+  var lane = '';
   var items = record.iterator();
-  var channel = recon.extant;
-  var via = recon.absent;
-  var node = recon.absent;
-  var lane = recon.absent;
-  header: while (!items.isEmpty()) {
-    var item = items.head();
-    switch (item.key) {
-      case 'send': break;
-      case 'event': channel = item.value; break;
-      case 'via': via = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-      default: break header;
+  items.step(); // @send
+  var heading = items.next();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+      }
+      i += 1;
     }
-    items.step();
   }
   var body = items.toRecord();
-  return new SendEventMessage(channel, via, node, lane, body);
+  return new SendEventMessage(node, lane, body);
 };
 
 
-function SendCommandMessage(channel, via, node, lane, body) {
+function SendCommandMessage(node, lane, body) {
   SendMessage.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'via', {enumerable: true, value: via || recon.absent});
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
   Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
   Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
@@ -216,168 +230,41 @@ Object.defineProperty(SendCommandMessage.prototype, 'isSendCommandMessage', {val
 SendCommandMessage.prototype.encode = function () {
   var builder = recon.builder();
   builder.attr('send');
-  builder.attr('command', this.channel);
-  if (!this.via.isAbsent) builder.attr('via', this.via);
-  builder.attr('node', this.node);
-  builder.attr('lane', this.lane);
+  builder.attr('command', recon(
+    recon.slot('node', this.node),
+    recon.slot('lane', this.lane)));
   builder.appendRecord(this.body);
   return builder.state();
 };
 SendCommandMessage.decode = function (record) {
+  var node = '';
+  var lane = '';
   var items = record.iterator();
-  var channel = recon.extant;
-  var via = recon.absent;
-  var node = recon.absent;
-  var lane = recon.absent;
-  header: while (!items.isEmpty()) {
-    var item = items.head();
-    switch (item.key) {
-      case 'send': break;
-      case 'command': channel = item.value; break;
-      case 'via': via = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-      default: break header;
+  items.step(); // @send
+  var heading = items.next();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+      }
+      i += 1;
     }
-    items.step();
   }
   var body = items.toRecord();
-  return new SendCommandMessage(channel, via, node, lane, body);
+  return new SendCommandMessage(node, lane, body);
 };
 
 
-function LinkRequest(channel, node, lane) {
+function GetRequest(node) {
   RequestEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'node', {enumerable: true, value: node});
-  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
-}
-LinkRequest.prototype = Object.create(RequestEnvelope.prototype);
-LinkRequest.prototype.constructor = LinkRequest;
-Object.defineProperty(LinkRequest.prototype, 'isLinkRequest', {value: true});
-LinkRequest.prototype.encode = function () {
-  return recon(
-    recon.attr('link', this.channel),
-    recon.attr('node', this.node),
-    recon.attr('lane', this.lane));
-};
-LinkRequest.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
-  var node = recon.absent;
-  var lane = recon.absent;
-  while (!items.isEmpty()) {
-    var item = items.next();
-    switch (item.key) {
-      case 'link': channel = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-    }
-  }
-  return new LinkRequest(channel, node, lane);
-};
-
-
-function LinkedResponse(channel, node, lane) {
-  ResponseEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'node', {enumerable: true, value: node});
-  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
-}
-LinkedResponse.prototype = Object.create(ResponseEnvelope.prototype);
-LinkedResponse.prototype.constructor = LinkedResponse;
-Object.defineProperty(LinkedResponse.prototype, 'isLinkedResponse', {value: true});
-LinkedResponse.prototype.encode = function () {
-  return recon(
-    recon.attr('linked', this.channel),
-    recon.attr('node', this.node),
-    recon.attr('lane', this.lane));
-};
-LinkedResponse.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
-  var node = recon.absent;
-  var lane = recon.absent;
-  while (!items.isEmpty()) {
-    var item = items.next();
-    switch (item.key) {
-      case 'linked': channel = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-    }
-  }
-  return new LinkedResponse(channel, node, lane);
-};
-
-
-function UnlinkRequest(channel, node, lane) {
-  RequestEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'node', {enumerable: true, value: node || recon.absent});
-  Object.defineProperty(this, 'lane', {enumerable: true, value: lane || recon.absent});
-}
-UnlinkRequest.prototype = Object.create(RequestEnvelope.prototype);
-UnlinkRequest.prototype.constructor = UnlinkRequest;
-Object.defineProperty(UnlinkRequest.prototype, 'isUnlinkRequest', {value: true});
-UnlinkRequest.prototype.encode = function () {
-  var builder = recon.builder();
-  builder.attr('unlink', this.channel);
-  if (!this.node.isAbsent) builder.attr('node', this.node);
-  if (!this.lane.isAbsent) builder.attr('lane', this.lane);
-  return builder.state();
-};
-UnlinkRequest.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
-  var node = recon.absent;
-  var lane = recon.absent;
-  while (!items.isEmpty()) {
-    var item = items.next();
-    switch (item.key) {
-      case 'unlink': channel = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-    }
-  }
-  return new UnlinkRequest(channel, node, lane);
-};
-
-
-function UnlinkedResponse(channel, node, lane) {
-  ResponseEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
-  Object.defineProperty(this, 'node', {enumerable: true, value: node});
-  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
-}
-UnlinkedResponse.prototype = Object.create(ResponseEnvelope.prototype);
-UnlinkedResponse.prototype.constructor = UnlinkedResponse;
-Object.defineProperty(UnlinkedResponse.prototype, 'isUnlinkedResponse', {value: true});
-UnlinkedResponse.prototype.encode = function () {
-  return recon(
-    recon.attr('unlinked', this.channel),
-    recon.attr('node', this.node),
-    recon.attr('lane', this.lane));
-};
-UnlinkedResponse.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
-  var node = recon.absent;
-  var lane = recon.absent;
-  while (!items.isEmpty()) {
-    var item = items.next();
-    switch (item.key) {
-      case 'unlinked': channel = item.value; break;
-      case 'node': node = item.value; break;
-      case 'lane': lane = item.value; break;
-    }
-  }
-  return new UnlinkedResponse(channel, node, lane);
-};
-
-
-function GetRequest(channel, node) {
-  RequestEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
 }
 GetRequest.prototype = Object.create(RequestEnvelope.prototype);
@@ -385,27 +272,33 @@ GetRequest.prototype.constructor = GetRequest;
 Object.defineProperty(GetRequest.prototype, 'isGetRequest', {value: true});
 GetRequest.prototype.encode = function () {
   return recon(
-    recon.attr('get', this.channel),
-    recon.attr('node', this.node));
+    recon.attr('get', recon(
+      recon.slot('node', this.node))));
 };
 GetRequest.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
-  var node = recon.absent;
-  while (!items.isEmpty()) {
-    var item = items.next();
-    switch (item.key) {
-      case 'get': channel = item.value; break;
-      case 'node': node = item.value; break;
+  var node = '';
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+      }
+      i += 1;
     }
   }
-  return new GetRequest(channel, node);
+  else if (!heading.value.isExtant) node = heading.value;
+  return new GetRequest(node);
 };
 
 
-function PutRequest(channel, node, body) {
+function PutRequest(node, body) {
   RequestEnvelope.call(this);
-  Object.defineProperty(this, 'channel', {enumerable: true, value: channel || recon.extant});
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
   Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
 }
@@ -414,26 +307,221 @@ PutRequest.prototype.constructor = PutRequest;
 Object.defineProperty(PutRequest.prototype, 'isPutRequest', {value: true});
 PutRequest.prototype.encode = function () {
   var builder = recon.builder();
-  builder.attr('put', this.channel);
-  builder.attr('node', this.node);
+  builder.attr('put', recon(
+    recon.slot('node', this.node)));
   builder.appendRecord(this.body);
   return builder.state();
 };
 PutRequest.decode = function (record) {
-  var items = record.iterator();
-  var channel = recon.extant;
-  var node = recon.absent;
-  header: while (!items.isEmpty()) {
-    var item = items.head();
-    switch (item.key) {
-      case 'put': channel = item.value; break;
-      case 'node': node = item.value; break;
-      default: break header;
+  var node = '';
+  var body = record.tail();
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+      }
+      i += 1;
     }
-    items.step();
   }
-  var body = items.toRecord();
-  return new PutRequest(channel, node, body);
+  else if (!heading.value.isExtant) node = heading.value;
+  return new PutRequest(node, body);
+};
+
+
+function StateResponse(node, body) {
+  ResponseEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
+}
+StateResponse.prototype = Object.create(ResponseEnvelope.prototype);
+StateResponse.prototype.constructor = StateResponse;
+Object.defineProperty(StateResponse.prototype, 'isStateResponse', {value: true});
+StateResponse.prototype.encode = function () {
+  var builder = recon.builder();
+  builder.attr('state', recon(
+    recon.slot('node', this.node)));
+  builder.appendRecord(this.body);
+  return builder.state();
+};
+StateResponse.decode = function (record) {
+  var node = '';
+  var body = record.tail();
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+      }
+      i += 1;
+    }
+  }
+  else if (!heading.value.isExtant) node = heading.value;
+  return new StateResponse(node, body);
+};
+
+
+function LinkRequest(node, lane) {
+  RequestEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
+}
+LinkRequest.prototype = Object.create(RequestEnvelope.prototype);
+LinkRequest.prototype.constructor = LinkRequest;
+Object.defineProperty(LinkRequest.prototype, 'isLinkRequest', {value: true});
+LinkRequest.prototype.encode = function () {
+  return recon(
+    recon.attr('link', recon(
+      recon.slot('node', this.node),
+      recon.slot('lane', this.lane))));
+};
+LinkRequest.decode = function (record) {
+  var node = '';
+  var lane = '';
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+      }
+      i += 1;
+    }
+  }
+  return new LinkRequest(node, lane);
+};
+
+
+function LinkedResponse(node, lane) {
+  ResponseEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
+}
+LinkedResponse.prototype = Object.create(ResponseEnvelope.prototype);
+LinkedResponse.prototype.constructor = LinkedResponse;
+Object.defineProperty(LinkedResponse.prototype, 'isLinkedResponse', {value: true});
+LinkedResponse.prototype.encode = function () {
+  return recon(
+    recon.attr('linked', recon(
+      recon.slot('node', this.node),
+      recon.slot('lane', this.lane))));
+};
+LinkedResponse.decode = function (record) {
+  var node = '';
+  var lane = '';
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+      }
+      i += 1;
+    }
+  }
+  return new LinkedResponse(node, lane);
+};
+
+
+function UnlinkRequest(node, lane) {
+  RequestEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
+}
+UnlinkRequest.prototype = Object.create(RequestEnvelope.prototype);
+UnlinkRequest.prototype.constructor = UnlinkRequest;
+Object.defineProperty(UnlinkRequest.prototype, 'isUnlinkRequest', {value: true});
+UnlinkRequest.prototype.encode = function () {
+  return recon(
+    recon.attr('unlink', recon(
+      recon.slot('node', this.node),
+      recon.slot('lane', this.lane))));
+};
+UnlinkRequest.decode = function (record) {
+  var node = '';
+  var lane = '';
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+      }
+      i += 1;
+    }
+  }
+  return new UnlinkRequest(node, lane);
+};
+
+
+function UnlinkedResponse(node, lane) {
+  ResponseEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
+}
+UnlinkedResponse.prototype = Object.create(ResponseEnvelope.prototype);
+UnlinkedResponse.prototype.constructor = UnlinkedResponse;
+Object.defineProperty(UnlinkedResponse.prototype, 'isUnlinkedResponse', {value: true});
+UnlinkedResponse.prototype.encode = function () {
+  return recon(
+    recon.attr('unlinked', recon(
+      recon.slot('node', this.node),
+      recon.slot('lane', this.lane))));
+};
+UnlinkedResponse.decode = function (record) {
+  var node = '';
+  var lane = '';
+  var heading = record.head();
+  if (heading.value instanceof recon.Record) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+        case 1: lane = header; break;
+      }
+      i += 1;
+    }
+  }
+  return new UnlinkedResponse(node, lane);
 };
 
 
@@ -447,9 +535,10 @@ exports.CommandMessage = CommandMessage;
 exports.SendMessage = SendMessage;
 exports.SendEventMessage = SendEventMessage;
 exports.SendCommandMessage = SendCommandMessage;
+exports.GetRequest = GetRequest;
+exports.PutRequest = PutRequest;
+exports.StateResponse = StateResponse;
 exports.LinkRequest = LinkRequest;
 exports.LinkedResponse = LinkedResponse;
 exports.UnlinkRequest = UnlinkRequest;
 exports.UnlinkedResponse = UnlinkedResponse;
-exports.GetRequest = GetRequest;
-exports.PutRequest = PutRequest;

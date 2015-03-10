@@ -14,7 +14,7 @@ npm install --save swim-proto-js
 ```js
 var proto = require('swim-proto-js');
 
-var envelope = proto.decode('@event @node("house#kitchen") @lane("light/on")');
+var envelope = proto.decode('@event(node: "house#kitchen", lane: "light/on")');
 ```
 
 ## Protocol Envelopes
@@ -26,64 +26,62 @@ propagation semantics.
 
 ### @link
 
-Subscribe to messages that flow through some model node in some lane.
-Clients may optionally specify a `channel_key` to identify the attachment.
+Subscribe to messages that flow through a model node in some lane.
 
-```recon
->> @link(<channel_key>) @node(<node_uri>) @lane(<lane_uri>)
-<< @linked(<channel_key>) @node(<node_uri>) @lane(<lane_uri>)
+```
+>> @link([node:] <node_uri>, [lane:] <lane_uri>)
+<< @linked([node:] <node_uri>, [lane:] <lane_uri>)
 ```
 
 #### Examples
 
-```recon
->> @link @node("house#kitchen") @lane("light")
-<< @linked @node("house#kitchen") @lane("light")
+```
+>> @link("house#kitchen", "light")
+<< @linked(node: "house#kitchen", lane: "light")
 
->> @link("alarms") @node("house") @lane("alarm")
-<< @linked("alarms") @node("house") @lane("alarm")
+>> @link(node: "house", lane: "alarm")
+<< @linked(node: "house", lane: "alarm")
 ```
 
 ### @unlink
 
-Remove a message subscription identified by the client chosen `channel_key`,
-or by a (`node_uri`, `lane_uri`) pair.
+Remove an existing message subscription identified by a
+(`node_uri`, `lane_uri`) pair.
 
-```recon
->> @unlink(<channel_key>) @node(<node_uri>) @lane(<lane_uri>)
-<< @unlinked(<channel_key>) @node(<node_uri>) @lane(<lane_uri>)
+```
+>> @unlink([node:] <node_uri>, [lane:] <lane_uri>)
+<< @unlinked([node:] <node_uri>, [lane:] <lane_uri>)
 ```
 
 #### Examples
 
-```recon
->> @unlink @node("house#kitchen") @lane("light")
-<< @unlinked @node("house#kitchen") @lane("light")
+```
+>> @unlink("house#kitchen", "light")
+<< @unlinked(node: "house#kitchen", lane: "light")
 
->> @unlink("alarms")
-<< @unlinked("alarms") @node("house") @lane("alarm")
+>> @unlink(node: "house", lane: "alarm")
+<< @unlinked(node: "house", lane: "alarm")
 ```
 
 ### @event
 
 Receive an event message that propagated through a linked model node on a
-monitored lane.  `channel_key` identifies the attachment that intercepted
-the message.  `link_uris` enumerates all model links the event passed
-through prior to reaching the receiver.  `node_uri` and `lane_uri` refer
-to origin node and lane to which the event was published.
+monitored lane.  `node_uri` and `lane_uri` refer to origin node and lane to
+which the event was published.  `link_uris` enumerates all model links the
+event passed through prior to reaching the receiver.
 
-```recon
-<< @event(<channel_key>) @via(<link_uris>) @node(<node_uri>) @lane(<lane_uri>) <body>
+```
+<< @event([node:] <node_uri>, [lane:] <lane_uri>, via: <link_uris>) <body>
 ```
 
 #### Examples
 
-```recon
-<< @event @via("house#kitchen/light") @node("swim://iot.example.com/L01FE") @lane("light/off") {
+```
+<< @event(node: "swim://iot.example.com/L01FE", lane: "light/off", via: "house#kitchen/light) {
   time: @date("2015-02-03T07:53:31-0800")
 }
 
-<< @event("alarms") @via("house#garage/smoke_detector") @node("swim://iot.example.com/SD02FD") @lane("alarm/smoke") {
+<< @event(node: "swim://iot.example.com/SD02FD", lane: "alarm/smoke", via: "house#garage/smoke_detector") {
   time: @data("2015-02-03T11:17:12-0800")
   concentration: 330 @ppm
   duration: 10 @seconds
@@ -93,69 +91,67 @@ to origin node and lane to which the event was published.
 ### @command
 
 Receive a command message that propagated through a linked model node on a
-monitored lane.  `channel_key` identifies the attachment that intercepted
-the message.  `link_uris` enumerates all model links the command passed
-through prior to reaching the receiver.  `node_uri` and `lane_uri` refer
-to origin node and lane to which the command was published.
+monitored lane.  `node_uri` and `lane_uri` refer to origin node and lane to
+which the command was published.  `link_uris` enumerates all model links the
+command passed through prior to reaching the receiver.
 
-```recon
-<< @command(<channel_key>) @via(<link_uris>) @node(<node_uri>) @lane(<lane_uri>) <body>
+```
+<< @command([@node:] <node_uri>, [lane:] <lane_uri>, via: <link_uris>) <body>
 ```
 
 #### Examples
 
-```recon
-<< @command @node("house#kitchen") @lane("light/on")
+```
+<< @command(node: "house#kitchen", lane: "light/on")
 
-<< @command("alarms") @node("house") @lane("alarm/silence") {
-  reason: "false alarm"
+<< @command(node: "swim://town.example.com/fire_dept", lane: "alarm/silence", via: "house") {
+  reason: "homeowner reported false alarm"
 }
 ```
 
 ### @send
 
-Publish a message to some model node on some lane.  `channel_key` optionally
-specifies a channel on which error messages may arrive.
+Publish a message to a model node on some lane.
 
-```recon
->> @send @event(<channel_key>) @node(<node_uri>) @lane(<lane_uri>) <body>
+```
+>> @send @event([node:] <node_uri>, [lane:] <lane_uri>) <body>
 
->> @send @command(<channel_key>) @node(<node_uri>) @lane(<lane_uri>) <body>
+>> @send @command([node:] <node_uri>, [lane:] <lane_uri>) <body>
 ```
 
 #### Examples
 
-```recon
->> @send @event @node("house#kitchen") @lane("toaster/done") {
+```
+>> @send @event(node: "house#kitchen", lane: "toaster/done") {
   items: 2
 }
 
->> @send @command @node("house#kitchen") @lane("light/on")
+>> @send @command(node: "house#kitchen", lane: "light/on")
 ```
 
 ### @get
 
 Fetch the model at `node_uri`.
 
-```recon
->> @get(<channel_key>) @node(<node_uri>)
-<< @result(<channel_key>) @node(<node_uri>) <body>
+```
+>> @get([node:] <node_uri>)
+<< @state([node:] <node_uri>) <body>
 ```
 
 #### Examples
 
-```recon
->> @get(1) @node("house#kitchen")
->> @get(2) @node("house#garage")
-
-<< @result(2) @node("house#garage") {
-  opener: @switch @link("swim://iot.example.com/GD04FB")
-  kitchen_door: @door @ref("house#kitchen")
-}
-<< @result(1) @node("house#kitchen") {
+```
+>> @get("house#kitchen")
+<< @state(node: "house#kitchen") {
   light: @light @link("swim://iot.example.com/L01FE")
   toaster: @toaster @link("swim://iot.example.com/T03FC")
   kitchen_door: @door @ref("house#garage")
+}
+
+>> @get(node: "house#garage")
+<< @state(node: "house#garage") {
+  opener: @switch @link("swim://iot.example.com/GD04FB")
+  kitchen_door: @door @ref("house#kitchen")
 }
 ```
 
@@ -163,20 +159,38 @@ Fetch the model at `node_uri`.
 
 Update the model at `node_uri`.
 
-```recon
->> @put(<channel_key>) @node(<node_uri>) <body>
-<< @result(<channel_key>) @node(<node_uri>) <body>
+```
+>> @put([node:] <node_uri>) <body>
+<< @state([node:] <node_uri>) <body>
 ```
 
 #### Examples
 
-```recon
->> @put(3) @node("house#garage") {
+```
+>> @put(node: "house#garage") {
   smoke_detector: @alarm @link("swim://iot.example.com/SD02FD")
 }
-<< @result(3) @node("house#garage") {
+<< @state(node: "house#garage") {
   opener: @switch @link("swim://iot.example.com/GD04FB")
   kitchen_door: @door @ref("house#kitchen")
   smoke_detector: @alarm @link("swim://iot.example.com/SD02FD")
+}
+```
+
+### @state
+
+Receive a model state update.
+
+```
+<< @state([node:] <node_uri>) <body>
+```
+
+#### Examples
+
+```
+<< @state(node: "house") {
+  living: @room {
+    tv: @tv @link("swim://iot.example.com/TV05FA")
+  }
 }
 ```
