@@ -2,21 +2,34 @@
 
 var recon = require('recon-js');
 
-
 function decode(record) {
-  if (typeof record === 'string') record = recon.parse(record);
-  switch (record.head().key) {
-    case 'event': return EventMessage.decode(record);
-    case 'command': return CommandMessage.decode(record);
-    case 'send': return SendMessage.decode(record);
-    case 'get': return GetRequest.decode(record);
-    case 'put': return PutRequest.decode(record);
-    case 'state': return StateResponse.decode(record);
-    case 'link': return LinkRequest.decode(record);
-    case 'linked': return LinkedResponse.decode(record);
-    case 'unlink': return UnlinkRequest.decode(record);
-    case 'unlinked': return UnlinkedResponse.decode(record);
+  if (record instanceof recon.Record) {
+    var heading = record.head();
+    if (heading.isField) switch (heading.key) {
+      case 'event': return EventMessage.decode(record);
+      case 'command': return CommandMessage.decode(record);
+      case 'send': return SendMessage.decode(record);
+      case 'get': return GetRequest.decode(record);
+      case 'put': return PutRequest.decode(record);
+      case 'state': return StateResponse.decode(record);
+      case 'link': return LinkRequest.decode(record);
+      case 'linked': return LinkedResponse.decode(record);
+      case 'unlink': return UnlinkRequest.decode(record);
+      case 'unlinked': return UnlinkedResponse.decode(record);
+    }
   }
+}
+
+function encode(envelope) {
+  return envelope.encode();
+}
+
+function parse(string) {
+  return decode(recon.parse(string));
+}
+
+function stringify(envelope) {
+  return recon.stringify(encode(envelope));
 }
 
 
@@ -526,6 +539,9 @@ UnlinkedResponse.decode = function (record) {
 
 
 exports.decode = decode;
+exports.encode = encode;
+exports.parse = parse;
+exports.stringify = stringify;
 exports.Envelope = Envelope;
 exports.RequestEnvelope = RequestEnvelope;
 exports.ResponseEnvelope = ResponseEnvelope;

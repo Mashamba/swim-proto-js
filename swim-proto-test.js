@@ -12,12 +12,42 @@ assert.same = function (x, y) {
 };
 
 
-describe('Envelope decoder', function () {
-  it('should parse and decode recon strings', function () {
-    var envelope = proto.decode('@event(node: "house#kitchen", lane: "light/on")');
+describe('Envelope transcoding', function () {
+  it('should decode envelopes from recon objects', function () {
+    var envelope = proto.decode(recon(
+      recon.attr('event', recon(
+        recon.slot('node', 'house#kitchen'),
+        recon.slot('lane', 'light/on')))));
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'house#kitchen');
     assert.same(envelope.lane, 'light/on');
+  });
+
+  it('should encode envelopes as recon objects', function () {
+    var envelope = new proto.EventMessage('house#kitchen', 'light/on');
+    var record = recon(
+      recon.attr('event', recon(
+        recon.slot('node', 'house#kitchen'),
+        recon.slot('lane', 'light/on'))));
+    assert.same(proto.encode(envelope), record);
+  });
+
+  it('should parse envelopes from recon strings', function () {
+    var envelope = proto.parse('@event(node: "house#kitchen", lane: "light/on")');
+    assert(envelope.isEventMessage);
+    assert.same(envelope.node, 'house#kitchen');
+    assert.same(envelope.lane, 'light/on');
+  });
+
+  it('should stringify envelopes as recon strings', function () {
+    var envelope = new proto.EventMessage('house#kitchen', 'light/on');
+    assert.same(proto.stringify(envelope), '@event(node:"house#kitchen",lane:"light/on")');
+  });
+
+  it('should parse unknown envelopes as undefined', function () {
+    assert(typeof proto.parse('') === 'undefined');
+    assert(typeof proto.parse('@foo') === 'undefined');
+    assert(typeof proto.parse('foo,bar') === 'undefined');
   });
 });
 
@@ -43,7 +73,7 @@ describe('@event message', function () {
   });
 
   it('should decode recon with named headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@event(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@event(node: node_uri, lane: lane_uri)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -52,7 +82,7 @@ describe('@event message', function () {
   });
 
   it('should decode recon with named headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@event(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}'));
+    var envelope = proto.parse('@event(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -61,7 +91,7 @@ describe('@event message', function () {
   });
 
   it('should decode recon with positional headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@event(node_uri, lane_uri)'));
+    var envelope = proto.parse('@event(node_uri, lane_uri)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -70,7 +100,7 @@ describe('@event message', function () {
   });
 
   it('should decode recon with positional headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@event(node_uri, lane_uri, via_uri) {a:1,foo}'));
+    var envelope = proto.parse('@event(node_uri, lane_uri, via_uri) {a:1,foo}');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -79,7 +109,7 @@ describe('@event message', function () {
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@event(node: node_uri, lane: lane_uri, via: via_uri, foo: bar)'));
+    var envelope = proto.parse('@event(node: node_uri, lane: lane_uri, via: via_uri, foo: bar)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -88,7 +118,7 @@ describe('@event message', function () {
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@event(node_uri, lane_uri, via_uri, bar)'));
+    var envelope = proto.parse('@event(node_uri, lane_uri, via_uri, bar)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -97,7 +127,7 @@ describe('@event message', function () {
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@event()'));
+    var envelope = proto.parse('@event()');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');
@@ -128,7 +158,7 @@ describe('@command message', function () {
   });
 
   it('should decode recon with named headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@command(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@command(node: node_uri, lane: lane_uri)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -137,7 +167,7 @@ describe('@command message', function () {
   });
 
   it('should decode recon with named headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@command(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}'));
+    var envelope = proto.parse('@command(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -146,7 +176,7 @@ describe('@command message', function () {
   });
 
   it('should decode recon with positional headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@command(node_uri, lane_uri)'));
+    var envelope = proto.parse('@command(node_uri, lane_uri)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -155,7 +185,7 @@ describe('@command message', function () {
   });
 
   it('should decode recon with positional headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@command(node_uri, lane_uri, via_uri) {a:1,foo}'));
+    var envelope = proto.parse('@command(node_uri, lane_uri, via_uri) {a:1,foo}');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -164,7 +194,7 @@ describe('@command message', function () {
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@command(node: node_uri, lane: lane_uri, via: via_uri, foo: bar)'));
+    var envelope = proto.parse('@command(node: node_uri, lane: lane_uri, via: via_uri, foo: bar)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -173,7 +203,7 @@ describe('@command message', function () {
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@command(node_uri, lane_uri, via_uri, bar)'));
+    var envelope = proto.parse('@command(node_uri, lane_uri, via_uri, bar)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -182,7 +212,7 @@ describe('@command message', function () {
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@command()'));
+    var envelope = proto.parse('@command()');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');
@@ -212,7 +242,7 @@ describe('@send @event message', function () {
   });
 
   it('should decode recon with named headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @event(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@send @event(node: node_uri, lane: lane_uri)');
     assert(envelope.isSendEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -220,7 +250,7 @@ describe('@send @event message', function () {
   });
 
   it('should decode recon with named headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @event(node: node_uri, lane: lane_uri) {a:1,foo}'));
+    var envelope = proto.parse('@send @event(node: node_uri, lane: lane_uri) {a:1,foo}');
     assert(envelope.isSendEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -228,7 +258,7 @@ describe('@send @event message', function () {
   });
 
   it('should decode recon with positional headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @event(node_uri, lane_uri)'));
+    var envelope = proto.parse('@send @event(node_uri, lane_uri)');
     assert(envelope.isSendEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -236,7 +266,7 @@ describe('@send @event message', function () {
   });
 
   it('should decode recon with positional headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @event(node_uri, lane_uri) {a:1,foo}'));
+    var envelope = proto.parse('@send @event(node_uri, lane_uri) {a:1,foo}');
     assert(envelope.isSendEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -244,7 +274,7 @@ describe('@send @event message', function () {
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@send @event(node: node_uri, lane: lane_uri, foo: bar)'));
+    var envelope = proto.parse('@send @event(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isSendEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -252,7 +282,7 @@ describe('@send @event message', function () {
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@send @event(node_uri, lane_uri, bar)'));
+    var envelope = proto.parse('@send @event(node_uri, lane_uri, bar)');
     assert(envelope.isSendEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -260,7 +290,7 @@ describe('@send @event message', function () {
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@send @event()'));
+    var envelope = proto.parse('@send @event()');
     assert(envelope.isSendEventMessage);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');
@@ -289,7 +319,7 @@ describe('@send @command message', function () {
   });
 
   it('should decode recon with named headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @command(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@send @command(node: node_uri, lane: lane_uri)');
     assert(envelope.isSendCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -297,7 +327,7 @@ describe('@send @command message', function () {
   });
 
   it('should decode recon with named headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @command(node: node_uri, lane: lane_uri) {a:1,foo}'));
+    var envelope = proto.parse('@send @command(node: node_uri, lane: lane_uri) {a:1,foo}');
     assert(envelope.isSendCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -305,7 +335,7 @@ describe('@send @command message', function () {
   });
 
   it('should decode recon with positional headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @command(node_uri, lane_uri)'));
+    var envelope = proto.parse('@send @command(node_uri, lane_uri)');
     assert(envelope.isSendCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -313,7 +343,7 @@ describe('@send @command message', function () {
   });
 
   it('should decode recon with positional headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@send @command(node_uri, lane_uri) {a:1,foo}'));
+    var envelope = proto.parse('@send @command(node_uri, lane_uri) {a:1,foo}');
     assert(envelope.isSendCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -321,7 +351,7 @@ describe('@send @command message', function () {
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@send @command(node: node_uri, lane: lane_uri, foo: bar)'));
+    var envelope = proto.parse('@send @command(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isSendCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -329,7 +359,7 @@ describe('@send @command message', function () {
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@send @command(node_uri, lane_uri, bar)'));
+    var envelope = proto.parse('@send @command(node_uri, lane_uri, bar)');
     assert(envelope.isSendCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -337,7 +367,7 @@ describe('@send @command message', function () {
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@send @command()'));
+    var envelope = proto.parse('@send @command()');
     assert(envelope.isSendCommandMessage);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');
@@ -359,31 +389,31 @@ describe('@get request', function () {
   });
 
   it('should decode recon with named headers', function () {
-    var envelope = proto.decode(recon.parse('@get(node: node_uri)'));
+    var envelope = proto.parse('@get(node: node_uri)');
     assert(envelope.isGetRequest);
     assert.same(envelope.node, 'node_uri');
   });
 
   it('should decode recon with positional headers', function () {
-    var envelope = proto.decode(recon.parse('@get(node_uri)'));
+    var envelope = proto.parse('@get(node_uri)');
     assert(envelope.isGetRequest);
     assert.same(envelope.node, 'node_uri');
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@get(node: node_uri, foo: bar)'));
+    var envelope = proto.parse('@get(node: node_uri, foo: bar)');
     assert(envelope.isGetRequest);
     assert.same(envelope.node, 'node_uri');
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@get(node_uri, bar)'));
+    var envelope = proto.parse('@get(node_uri, bar)');
     assert(envelope.isGetRequest);
     assert.same(envelope.node, 'node_uri');
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@get()'));
+    var envelope = proto.parse('@get()');
     assert(envelope.isGetRequest);
     assert.same(envelope.node, '');
   });
@@ -409,49 +439,49 @@ describe('@put request', function () {
   });
 
   it('should decode recon with named headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@put(node: node_uri)'));
+    var envelope = proto.parse('@put(node: node_uri)');
     assert(envelope.isPutRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with named headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@put(node: node_uri) {a:1,foo}'));
+    var envelope = proto.parse('@put(node: node_uri) {a:1,foo}');
     assert(envelope.isPutRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.parse('a:1,foo'));
   });
 
   it('should decode recon with positional headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@put(node_uri)'));
+    var envelope = proto.parse('@put(node_uri)');
     assert(envelope.isPutRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with positional headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@put(node_uri) {a:1,foo}'));
+    var envelope = proto.parse('@put(node_uri) {a:1,foo}');
     assert(envelope.isPutRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.parse('a:1,foo'));
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@put(node: node_uri, foo: bar)'));
+    var envelope = proto.parse('@put(node: node_uri, foo: bar)');
     assert(envelope.isPutRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@put(node_uri, bar)'));
+    var envelope = proto.parse('@put(node_uri, bar)');
     assert(envelope.isPutRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@put()'));
+    var envelope = proto.parse('@put()');
     assert(envelope.isPutRequest);
     assert.same(envelope.node, '');
     assert.same(envelope.body, recon.empty());
@@ -478,49 +508,49 @@ describe('@state response', function () {
   });
 
   it('should decode recon with named headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@state(node: node_uri)'));
+    var envelope = proto.parse('@state(node: node_uri)');
     assert(envelope.isStateResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with named headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@state(node: node_uri) {a:1,foo}'));
+    var envelope = proto.parse('@state(node: node_uri) {a:1,foo}');
     assert(envelope.isStateResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.parse('a:1,foo'));
   });
 
   it('should decode recon with positional headers and an empty body', function () {
-    var envelope = proto.decode(recon.parse('@state(node_uri)'));
+    var envelope = proto.parse('@state(node_uri)');
     assert(envelope.isStateResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with positional headers and a non-empty body', function () {
-    var envelope = proto.decode(recon.parse('@state(node_uri) {a:1,foo}'));
+    var envelope = proto.parse('@state(node_uri) {a:1,foo}');
     assert(envelope.isStateResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.parse('a:1,foo'));
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@state(node: node_uri, foo: bar)'));
+    var envelope = proto.parse('@state(node: node_uri, foo: bar)');
     assert(envelope.isStateResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@state(node_uri, bar)'));
+    var envelope = proto.parse('@state(node_uri, bar)');
     assert(envelope.isStateResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.body, recon.empty());
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@state()'));
+    var envelope = proto.parse('@state()');
     assert(envelope.isStateResponse);
     assert.same(envelope.node, '');
     assert.same(envelope.body, recon.empty());
@@ -542,35 +572,35 @@ describe('@link request', function () {
   });
 
   it('should decode recon with named headers', function () {
-    var envelope = proto.decode(recon.parse('@link(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@link(node: node_uri, lane: lane_uri)');
     assert(envelope.isLinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional headers', function () {
-    var envelope = proto.decode(recon.parse('@link(node_uri, lane_uri)'));
+    var envelope = proto.parse('@link(node_uri, lane_uri)');
     assert(envelope.isLinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@link(node: node_uri, lane: lane_uri, foo: bar)'));
+    var envelope = proto.parse('@link(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isLinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@link(node_uri, lane_uri, bar)'));
+    var envelope = proto.parse('@link(node_uri, lane_uri, bar)');
     assert(envelope.isLinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@link()'));
+    var envelope = proto.parse('@link()');
     assert(envelope.isLinkRequest);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');
@@ -592,35 +622,35 @@ describe('@linked response', function () {
   });
 
   it('should decode recon with named headers', function () {
-    var envelope = proto.decode(recon.parse('@linked(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@linked(node: node_uri, lane: lane_uri)');
     assert(envelope.isLinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional headers', function () {
-    var envelope = proto.decode(recon.parse('@linked(node_uri, lane_uri)'));
+    var envelope = proto.parse('@linked(node_uri, lane_uri)');
     assert(envelope.isLinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@linked(node: node_uri, lane: lane_uri, foo: bar)'));
+    var envelope = proto.parse('@linked(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isLinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@linked(node_uri, lane_uri, bar)'));
+    var envelope = proto.parse('@linked(node_uri, lane_uri, bar)');
     assert(envelope.isLinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@linked()'));
+    var envelope = proto.parse('@linked()');
     assert(envelope.isLinkedResponse);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');
@@ -642,35 +672,35 @@ describe('@unlink request', function () {
   });
 
   it('should decode recon with named headers', function () {
-    var envelope = proto.decode(recon.parse('@unlink(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@unlink(node: node_uri, lane: lane_uri)');
     assert(envelope.isUnlinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional headers', function () {
-    var envelope = proto.decode(recon.parse('@unlink(node_uri, lane_uri)'));
+    var envelope = proto.parse('@unlink(node_uri, lane_uri)');
     assert(envelope.isUnlinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@unlink(node: node_uri, lane: lane_uri, foo: bar)'));
+    var envelope = proto.parse('@unlink(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isUnlinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@unlink(node_uri, lane_uri, bar)'));
+    var envelope = proto.parse('@unlink(node_uri, lane_uri, bar)');
     assert(envelope.isUnlinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@unlink()'));
+    var envelope = proto.parse('@unlink()');
     assert(envelope.isUnlinkRequest);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');
@@ -692,35 +722,35 @@ describe('@unlinked response', function () {
   });
 
   it('should decode recon with named headers', function () {
-    var envelope = proto.decode(recon.parse('@unlinked(node: node_uri, lane: lane_uri)'));
+    var envelope = proto.parse('@unlinked(node: node_uri, lane: lane_uri)');
     assert(envelope.isUnlinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional headers', function () {
-    var envelope = proto.decode(recon.parse('@unlinked(node_uri, lane_uri)'));
+    var envelope = proto.parse('@unlinked(node_uri, lane_uri)');
     assert(envelope.isUnlinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with named and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@unlinked(node: node_uri, lane: lane_uri, foo: bar)'));
+    var envelope = proto.parse('@unlinked(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isUnlinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with positional and unknown headers', function () {
-    var envelope = proto.decode(recon.parse('@unlinked(node_uri, lane_uri, bar)'));
+    var envelope = proto.parse('@unlinked(node_uri, lane_uri, bar)');
     assert(envelope.isUnlinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
   });
 
   it('should decode recon with missing headers', function () {
-    var envelope = proto.decode(recon.parse('@unlinked()'));
+    var envelope = proto.parse('@unlinked()');
     assert(envelope.isUnlinkedResponse);
     assert.same(envelope.node, '');
     assert.same(envelope.lane, '');

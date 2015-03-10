@@ -1,6 +1,6 @@
 # Structural Web Integrated Messaging (SWIM) Protocol
 
-[![Build Status](https://travis-ci.org/coeffect/swim-proto-js.svg?branch=master)](https://travis-ci.org/coeffect/swim-proto-js) [![Coveralls Status](http://img.shields.io/coveralls/coeffect/swim-proto-js/master.svg)](https://coveralls.io/r/coeffect/swim-proto-js)
+[![Build Status](https://travis-ci.org/coeffect/swim-proto-js.svg?branch=master)](https://travis-ci.org/coeffect/swim-proto-js) [![Coverage Status](https://coveralls.io/repos/coeffect/swim-proto-js/badge.svg?branch=master)](https://coveralls.io/r/coeffect/swim-proto-js?branch=master)
 
 ## JavaScript Library
 
@@ -14,7 +14,8 @@ npm install --save swim-proto-js
 ```js
 var proto = require('swim-proto-js');
 
-var envelope = proto.decode('@event(node: "house#kitchen", lane: "light/on")');
+var envelope = proto.parse('@event(node: "house#kitchen", lane: "light/on")');
+proto.stringify(envelope);
 ```
 
 ## Protocol Envelopes
