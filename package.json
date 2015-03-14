@@ -1,6 +1,6 @@
 {
   "name": "swim-proto-js",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Structural Web Integrated Messaging (SWIM) JavaScript Protocol Implementation",
   "homepage": "https://github.com/coeffect/swim-proto-js",
   "author": "Chris Sachs <chris@coeffect.net>",

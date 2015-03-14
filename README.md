@@ -66,9 +66,10 @@ Remove an existing message subscription identified by a
 
 ### @event
 
-Receive an event message that propagated through a linked model node on a
-monitored lane.  `node_uri` and `lane_uri` refer to origin node and lane to
-which the event was published.  `link_uris` enumerates all model links the
+Send an event message to a model node on some lane, or receive an event
+message that propagated through a linked model node on a subscribed lane.
+`node_uri` and `lane_uri` always refer to origin node and lane to which
+the event was published.  `link_uris` enumerates all model links the
 event passed through prior to reaching the receiver.
 
 ```
@@ -91,9 +92,10 @@ event passed through prior to reaching the receiver.
 
 ### @command
 
-Receive a command message that propagated through a linked model node on a
-monitored lane.  `node_uri` and `lane_uri` refer to origin node and lane to
-which the command was published.  `link_uris` enumerates all model links the
+Send a command message to a model node on some lane, or receive a command
+message that propagated through a linked model node on a subscribed lane.
+`node_uri` and `lane_uri` always refer to origin node and lane to which
+the command was published.  `link_uris` enumerates all model links the
 command passed through prior to reaching the receiver.
 
 ```
@@ -108,26 +110,6 @@ command passed through prior to reaching the receiver.
 << @command(node: "swim://town.example.com/fire_dept", lane: "alarm/silence", via: "house") {
   reason: "homeowner reported false alarm"
 }
-```
-
-### @send
-
-Publish a message to a model node on some lane.
-
-```
->> @send @event([node:] <node_uri>, [lane:] <lane_uri>) <body>
-
->> @send @command([node:] <node_uri>, [lane:] <lane_uri>) <body>
-```
-
-#### Examples
-
-```
->> @send @event(node: "house#kitchen", lane: "toaster/done") {
-  items: 2
-}
-
->> @send @command(node: "house#kitchen", lane: "light/on")
 ```
 
 ### @get

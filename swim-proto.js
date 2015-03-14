@@ -8,7 +8,6 @@ function decode(record) {
     if (heading.isField) switch (heading.key) {
       case 'event': return EventMessage.decode(record);
       case 'command': return CommandMessage.decode(record);
-      case 'send': return SendMessage.decode(record);
       case 'get': return GetRequest.decode(record);
       case 'put': return PutRequest.decode(record);
       case 'state': return StateResponse.decode(record);
@@ -39,9 +38,6 @@ Object.defineProperty(Envelope.prototype, 'isResponse', {value: false});
 Object.defineProperty(Envelope.prototype, 'isMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isEventMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isCommandMessage', {value: false});
-Object.defineProperty(Envelope.prototype, 'isSendMessage', {value: false});
-Object.defineProperty(Envelope.prototype, 'isSendEventMessage', {value: false});
-Object.defineProperty(Envelope.prototype, 'isSendCommandMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isGetRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isPutRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isStateResponse', {value: false});
@@ -168,111 +164,6 @@ CommandMessage.decode = function (record) {
     }
   }
   return new CommandMessage(node, lane, via, body);
-};
-
-
-function SendMessage() {
-  MessageEnvelope.call(this);
-}
-SendMessage.prototype = Object.create(MessageEnvelope.prototype);
-SendMessage.prototype.constructor = SendMessage;
-Object.defineProperty(SendMessage.prototype, 'isSendMessage', {value: true});
-SendMessage.decode = function (record) {
-  var heading = record(1);
-  switch (heading.key) {
-    case 'event': return SendEventMessage.decode(record);
-    case 'command': return SendCommandMessage.decode(record);
-  }
-};
-
-
-function SendEventMessage(node, lane, body) {
-  SendMessage.call(this);
-  Object.defineProperty(this, 'node', {enumerable: true, value: node});
-  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
-  Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
-}
-SendEventMessage.prototype = Object.create(SendMessage.prototype);
-SendEventMessage.prototype.constructor = SendEventMessage;
-Object.defineProperty(SendEventMessage.prototype, 'isSendEventMessage', {value: true});
-SendEventMessage.prototype.encode = function () {
-  var builder = recon.builder();
-  builder.attr('send');
-  builder.attr('event', recon(
-    recon.slot('node', this.node),
-    recon.slot('lane', this.lane)));
-  builder.appendRecord(this.body);
-  return builder.state();
-};
-SendEventMessage.decode = function (record) {
-  var node = '';
-  var lane = '';
-  var items = record.iterator();
-  items.step(); // @send
-  var heading = items.next();
-  if (heading.value instanceof recon.Record) {
-    var headers = heading.value.iterator();
-    var i = 0;
-    while (!headers.isEmpty()) {
-      var header = headers.next();
-      if (header.isField) switch (header.key) {
-        case 'node': node = header.value; break;
-        case 'lane': lane = header.value; break;
-      }
-      else switch (i) {
-        case 0: node = header; break;
-        case 1: lane = header; break;
-      }
-      i += 1;
-    }
-  }
-  var body = items.toRecord();
-  return new SendEventMessage(node, lane, body);
-};
-
-
-function SendCommandMessage(node, lane, body) {
-  SendMessage.call(this);
-  Object.defineProperty(this, 'node', {enumerable: true, value: node});
-  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
-  Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
-}
-SendCommandMessage.prototype = Object.create(SendMessage.prototype);
-SendCommandMessage.prototype.constructor = SendCommandMessage;
-Object.defineProperty(SendCommandMessage.prototype, 'isSendCommandMessage', {value: true});
-SendCommandMessage.prototype.encode = function () {
-  var builder = recon.builder();
-  builder.attr('send');
-  builder.attr('command', recon(
-    recon.slot('node', this.node),
-    recon.slot('lane', this.lane)));
-  builder.appendRecord(this.body);
-  return builder.state();
-};
-SendCommandMessage.decode = function (record) {
-  var node = '';
-  var lane = '';
-  var items = record.iterator();
-  items.step(); // @send
-  var heading = items.next();
-  if (heading.value instanceof recon.Record) {
-    var headers = heading.value.iterator();
-    var i = 0;
-    while (!headers.isEmpty()) {
-      var header = headers.next();
-      if (header.isField) switch (header.key) {
-        case 'node': node = header.value; break;
-        case 'lane': lane = header.value; break;
-      }
-      else switch (i) {
-        case 0: node = header; break;
-        case 1: lane = header; break;
-      }
-      i += 1;
-    }
-  }
-  var body = items.toRecord();
-  return new SendCommandMessage(node, lane, body);
 };
 
 
@@ -548,9 +439,6 @@ exports.ResponseEnvelope = ResponseEnvelope;
 exports.MessageEnvelope = MessageEnvelope;
 exports.EventMessage = EventMessage;
 exports.CommandMessage = CommandMessage;
-exports.SendMessage = SendMessage;
-exports.SendEventMessage = SendEventMessage;
-exports.SendCommandMessage = SendCommandMessage;
 exports.GetRequest = GetRequest;
 exports.PutRequest = PutRequest;
 exports.StateResponse = StateResponse;
