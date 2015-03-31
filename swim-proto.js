@@ -3,7 +3,7 @@
 var recon = require('recon-js');
 
 function decode(record) {
-  if (record instanceof recon.Record) {
+  if (record.isRecord) {
     var heading = record.head();
     if (heading.isField) switch (heading.key) {
       case 'event': return EventMessage.decode(record);
@@ -97,7 +97,7 @@ EventMessage.decode = function (record) {
   var via = recon.absent;
   var body = record.tail();
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -145,7 +145,7 @@ CommandMessage.decode = function (record) {
   var via = recon.absent;
   var body = record.tail();
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -182,7 +182,7 @@ GetRequest.prototype.encode = function () {
 GetRequest.decode = function (record) {
   var node = '';
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -220,7 +220,7 @@ PutRequest.decode = function (record) {
   var node = '';
   var body = record.tail();
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -258,7 +258,7 @@ StateResponse.decode = function (record) {
   var node = '';
   var body = record.tail();
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -295,7 +295,7 @@ LinkRequest.decode = function (record) {
   var node = '';
   var lane = '';
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -333,7 +333,7 @@ LinkedResponse.decode = function (record) {
   var node = '';
   var lane = '';
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -371,7 +371,7 @@ UnlinkRequest.decode = function (record) {
   var node = '';
   var lane = '';
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
@@ -409,7 +409,7 @@ UnlinkedResponse.decode = function (record) {
   var node = '';
   var lane = '';
   var heading = record.head();
-  if (heading.value instanceof recon.Record) {
+  if (heading.value.isRecord) {
     var headers = heading.value.iterator();
     var i = 0;
     while (!headers.isEmpty()) {
