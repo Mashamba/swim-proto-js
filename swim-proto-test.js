@@ -8,7 +8,7 @@ var proto = require('./swim-proto.js');
 
 assert.same = function (x, y) {
   if (!recon.compare(x, y))
-    assert.fail(false, true, recon.stringify(x) +' did not equal '+ recon.stringify(y));
+    assert.fail(false, true, recon.stringify(x) + ' did not equal ' + recon.stringify(y));
 };
 
 
