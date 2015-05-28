@@ -1,7 +1,5 @@
 # Structural Web Integrated Messaging (SWIM) Protocol
 
-[![Build Status](https://travis-ci.org/coeffect/swim-proto-js.svg?branch=master)](https://travis-ci.org/coeffect/swim-proto-js) [![Coverage Status](https://coveralls.io/repos/coeffect/swim-proto-js/badge.svg?branch=master)](https://coveralls.io/r/coeffect/swim-proto-js?branch=master)
-
 ## JavaScript Library
 
 The SWIM protocol library can run in any standard JavaScript environment.
@@ -20,7 +18,7 @@ proto.stringify(envelope);
 
 ## Protocol Envelopes
 
-The SWIM protocol defines a set of [RECON](https://github.com/coeffect/recon-js)
+The SWIM protocol defines a set of [RECON](https://github.com/web-aware/recon-js)
 datatypes for bridging multiplexed structural messaging endpoints.
 The protocol library does not itself implement model-based message
 propagation semantics.
