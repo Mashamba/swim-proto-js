@@ -8,13 +8,15 @@ function decode(record) {
     if (heading.isField) switch (heading.key) {
       case 'event': return EventMessage.decode(record);
       case 'command': return CommandMessage.decode(record);
-      case 'get': return GetRequest.decode(record);
-      case 'put': return PutRequest.decode(record);
-      case 'state': return StateResponse.decode(record);
+      case 'sync': return SyncRequest.decode(record);
+      case 'synced': return SyncedResponse.decode(record);
       case 'link': return LinkRequest.decode(record);
       case 'linked': return LinkedResponse.decode(record);
       case 'unlink': return UnlinkRequest.decode(record);
       case 'unlinked': return UnlinkedResponse.decode(record);
+      case 'get': return GetRequest.decode(record);
+      case 'put': return PutRequest.decode(record);
+      case 'state': return StateResponse.decode(record);
     }
   }
 }
@@ -38,13 +40,15 @@ Object.defineProperty(Envelope.prototype, 'isResponse', {value: false});
 Object.defineProperty(Envelope.prototype, 'isMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isEventMessage', {value: false});
 Object.defineProperty(Envelope.prototype, 'isCommandMessage', {value: false});
-Object.defineProperty(Envelope.prototype, 'isGetRequest', {value: false});
-Object.defineProperty(Envelope.prototype, 'isPutRequest', {value: false});
-Object.defineProperty(Envelope.prototype, 'isStateResponse', {value: false});
+Object.defineProperty(Envelope.prototype, 'isSyncRequest', {value: false});
+Object.defineProperty(Envelope.prototype, 'isSyncedResponse', {value: false});
 Object.defineProperty(Envelope.prototype, 'isLinkRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isLinkedResponse', {value: false});
 Object.defineProperty(Envelope.prototype, 'isUnlinkRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isUnlinkedResponse', {value: false});
+Object.defineProperty(Envelope.prototype, 'isGetRequest', {value: false});
+Object.defineProperty(Envelope.prototype, 'isPutRequest', {value: false});
+Object.defineProperty(Envelope.prototype, 'isStateResponse', {value: false});
 
 
 function RequestEnvelope() {
@@ -167,20 +171,23 @@ CommandMessage.decode = function (record) {
 };
 
 
-function GetRequest(node) {
+function SyncRequest(node, lane) {
   RequestEnvelope.call(this);
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
 }
-GetRequest.prototype = Object.create(RequestEnvelope.prototype);
-GetRequest.prototype.constructor = GetRequest;
-Object.defineProperty(GetRequest.prototype, 'isGetRequest', {value: true});
-GetRequest.prototype.encode = function () {
+SyncRequest.prototype = Object.create(RequestEnvelope.prototype);
+SyncRequest.prototype.constructor = SyncRequest;
+Object.defineProperty(SyncRequest.prototype, 'isSyncRequest', {value: true});
+SyncRequest.prototype.encode = function () {
   return recon(
-    recon.attr('get', recon(
-      recon.slot('node', this.node))));
+    recon.attr('sync', recon(
+      recon.slot('node', this.node),
+      recon.slot('lane', this.lane))));
 };
-GetRequest.decode = function (record) {
+SyncRequest.decode = function (record) {
   var node = '';
+  var lane = '';
   var heading = record.head();
   if (heading.value.isRecord) {
     var headers = heading.value.iterator();
@@ -189,74 +196,36 @@ GetRequest.decode = function (record) {
       var header = headers.next();
       if (header.isField) switch (header.key) {
         case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
       }
       else switch (i) {
         case 0: node = header; break;
+        case 1: lane = header; break;
       }
       i += 1;
     }
   }
-  else if (!heading.value.isExtant) node = heading.value;
-  return new GetRequest(node);
+  return new SyncRequest(node, lane);
 };
 
 
-function PutRequest(node, body) {
-  RequestEnvelope.call(this);
-  Object.defineProperty(this, 'node', {enumerable: true, value: node});
-  Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
-}
-PutRequest.prototype = Object.create(RequestEnvelope.prototype);
-PutRequest.prototype.constructor = PutRequest;
-Object.defineProperty(PutRequest.prototype, 'isPutRequest', {value: true});
-PutRequest.prototype.encode = function () {
-  var builder = recon.builder();
-  builder.attr('put', recon(
-    recon.slot('node', this.node)));
-  builder.appendRecord(this.body);
-  return builder.state();
-};
-PutRequest.decode = function (record) {
-  var node = '';
-  var body = record.tail();
-  var heading = record.head();
-  if (heading.value.isRecord) {
-    var headers = heading.value.iterator();
-    var i = 0;
-    while (!headers.isEmpty()) {
-      var header = headers.next();
-      if (header.isField) switch (header.key) {
-        case 'node': node = header.value; break;
-      }
-      else switch (i) {
-        case 0: node = header; break;
-      }
-      i += 1;
-    }
-  }
-  else if (!heading.value.isExtant) node = heading.value;
-  return new PutRequest(node, body);
-};
-
-
-function StateResponse(node, body) {
+function SyncedResponse(node, lane) {
   ResponseEnvelope.call(this);
   Object.defineProperty(this, 'node', {enumerable: true, value: node});
-  Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
+  Object.defineProperty(this, 'lane', {enumerable: true, value: lane});
 }
-StateResponse.prototype = Object.create(ResponseEnvelope.prototype);
-StateResponse.prototype.constructor = StateResponse;
-Object.defineProperty(StateResponse.prototype, 'isStateResponse', {value: true});
-StateResponse.prototype.encode = function () {
-  var builder = recon.builder();
-  builder.attr('state', recon(
-    recon.slot('node', this.node)));
-  builder.appendRecord(this.body);
-  return builder.state();
+SyncedResponse.prototype = Object.create(ResponseEnvelope.prototype);
+SyncedResponse.prototype.constructor = SyncedResponse;
+Object.defineProperty(SyncedResponse.prototype, 'isSyncedResponse', {value: true});
+SyncedResponse.prototype.encode = function () {
+  return recon(
+    recon.attr('synced', recon(
+      recon.slot('node', this.node),
+      recon.slot('lane', this.lane))));
 };
-StateResponse.decode = function (record) {
+SyncedResponse.decode = function (record) {
   var node = '';
-  var body = record.tail();
+  var lane = '';
   var heading = record.head();
   if (heading.value.isRecord) {
     var headers = heading.value.iterator();
@@ -265,15 +234,16 @@ StateResponse.decode = function (record) {
       var header = headers.next();
       if (header.isField) switch (header.key) {
         case 'node': node = header.value; break;
+        case 'lane': lane = header.value; break;
       }
       else switch (i) {
         case 0: node = header; break;
+        case 1: lane = header; break;
       }
       i += 1;
     }
   }
-  else if (!heading.value.isExtant) node = heading.value;
-  return new StateResponse(node, body);
+  return new SyncedResponse(node, lane);
 };
 
 
@@ -429,6 +399,116 @@ UnlinkedResponse.decode = function (record) {
 };
 
 
+function GetRequest(node) {
+  RequestEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+}
+GetRequest.prototype = Object.create(RequestEnvelope.prototype);
+GetRequest.prototype.constructor = GetRequest;
+Object.defineProperty(GetRequest.prototype, 'isGetRequest', {value: true});
+GetRequest.prototype.encode = function () {
+  return recon(
+    recon.attr('get', recon(
+      recon.slot('node', this.node))));
+};
+GetRequest.decode = function (record) {
+  var node = '';
+  var heading = record.head();
+  if (heading.value.isRecord) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+      }
+      i += 1;
+    }
+  }
+  else if (!heading.value.isExtant) node = heading.value;
+  return new GetRequest(node);
+};
+
+
+function PutRequest(node, body) {
+  RequestEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
+}
+PutRequest.prototype = Object.create(RequestEnvelope.prototype);
+PutRequest.prototype.constructor = PutRequest;
+Object.defineProperty(PutRequest.prototype, 'isPutRequest', {value: true});
+PutRequest.prototype.encode = function () {
+  var builder = recon.builder();
+  builder.attr('put', recon(
+    recon.slot('node', this.node)));
+  builder.appendRecord(this.body);
+  return builder.state();
+};
+PutRequest.decode = function (record) {
+  var node = '';
+  var body = record.tail();
+  var heading = record.head();
+  if (heading.value.isRecord) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+      }
+      i += 1;
+    }
+  }
+  else if (!heading.value.isExtant) node = heading.value;
+  return new PutRequest(node, body);
+};
+
+
+function StateResponse(node, body) {
+  ResponseEnvelope.call(this);
+  Object.defineProperty(this, 'node', {enumerable: true, value: node});
+  Object.defineProperty(this, 'body', {enumerable: true, value: body || recon.empty()});
+}
+StateResponse.prototype = Object.create(ResponseEnvelope.prototype);
+StateResponse.prototype.constructor = StateResponse;
+Object.defineProperty(StateResponse.prototype, 'isStateResponse', {value: true});
+StateResponse.prototype.encode = function () {
+  var builder = recon.builder();
+  builder.attr('state', recon(
+    recon.slot('node', this.node)));
+  builder.appendRecord(this.body);
+  return builder.state();
+};
+StateResponse.decode = function (record) {
+  var node = '';
+  var body = record.tail();
+  var heading = record.head();
+  if (heading.value.isRecord) {
+    var headers = heading.value.iterator();
+    var i = 0;
+    while (!headers.isEmpty()) {
+      var header = headers.next();
+      if (header.isField) switch (header.key) {
+        case 'node': node = header.value; break;
+      }
+      else switch (i) {
+        case 0: node = header; break;
+      }
+      i += 1;
+    }
+  }
+  else if (!heading.value.isExtant) node = heading.value;
+  return new StateResponse(node, body);
+};
+
+
 exports.decode = decode;
 exports.encode = encode;
 exports.parse = parse;
@@ -439,10 +519,12 @@ exports.ResponseEnvelope = ResponseEnvelope;
 exports.MessageEnvelope = MessageEnvelope;
 exports.EventMessage = EventMessage;
 exports.CommandMessage = CommandMessage;
-exports.GetRequest = GetRequest;
-exports.PutRequest = PutRequest;
-exports.StateResponse = StateResponse;
+exports.SyncRequest = SyncRequest;
+exports.SyncedResponse = SyncedResponse;
 exports.LinkRequest = LinkRequest;
 exports.LinkedResponse = LinkedResponse;
 exports.UnlinkRequest = UnlinkRequest;
 exports.UnlinkedResponse = UnlinkedResponse;
+exports.GetRequest = GetRequest;
+exports.PutRequest = PutRequest;
+exports.StateResponse = StateResponse;
