@@ -1,8 +1,8 @@
-# SWIM Protocol JavaScript Implementation
+# Swim Protocol JavaScript Implementation
 
 ## JavaScript Library
 
-The SWIM protocol library can be used in any standard JavaScript environment.
+The Swim protocol library can be used in any standard JavaScript environment.
 Use `npm` to incorporate the library into Node.js projects.
 
 ```
@@ -18,7 +18,7 @@ proto.stringify(envelope);
 
 ## Protocol Envelopes
 
-The SWIM protocol defines a set of [RECON](https://github.com/web-aware/recon-js)
+The Swim protocol defines a set of [RECON](https://github.com/web-aware/recon-js)
 datatypes used for URI-linked multiplexed structural messaging.
 
 ### @event

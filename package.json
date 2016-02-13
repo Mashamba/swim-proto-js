@@ -1,9 +1,9 @@
 {
   "name": "swim-proto-js",
-  "version": "0.3.0",
-  "description": "SWIM Protocol JavaScript Implementation",
-  "homepage": "https://github.com/web-aware/swim-proto-js",
-  "author": "Chris Sachs <chris@webaware.com>",
+  "version": "0.4.0",
+  "description": "Swim Protocol JavaScript Implementation",
+  "homepage": "https://github.com/swimit/swim-proto-js",
+  "author": "Chris Sachs <chris@swim.it>",
   "license": "Apache-2.0",
   "keywords": [
     "actor",
@@ -26,10 +26,10 @@
     "web"
   ],
   "dependencies": {
-    "recon-js": "^0.3.3"
+    "recon-js": "^0.3.6"
   },
   "devDependencies": {
-    "browserify": "^12.0.1",
+    "browserify": "^13.0.0",
     "coveralls": "^2.11.2",
     "del": "^2.2.0",
     "gulp": "^3.9.0",
@@ -51,10 +51,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/web-aware/swim-proto-js.git"
+    "url": "https://github.com/swimit/swim-proto-js.git"
   },
   "bugs": {
-    "url": "https://github.com/web-aware/swim-proto-js/issues"
+    "url": "https://github.com/swimit/swim-proto-js/issues"
   },
   "scripts": {
     "test": "gulp",

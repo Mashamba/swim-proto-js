@@ -14,7 +14,7 @@ assert.same = function (x, y) {
 };
 
 
-describe('SWIM protocol library', function () {
+describe('Swim protocol library', function () {
   it('should expose its build config', function () {
     assert.equal(proto.config.version, pkg.version);
   });
@@ -57,12 +57,25 @@ describe('Envelope transcoding', function () {
 
 describe('@event messages', function () {
   it('should have header properties', function () {
-    var envelope = new proto.EventMessage('node_uri', 'lane_uri', [], true);
+    var envelope = new proto.EventMessage('node_uri', 'lane_uri', true);
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, []);
     assert.same(envelope.body, true);
+  });
+
+  it('should support readdressing', function () {
+    var envelope1 = new proto.EventMessage('node1_uri', 'lane1_uri', true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isEventMessage);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isEventMessage);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.body, true);
   });
 
   it('should encode RECON with an empty body', function () {
@@ -71,61 +84,47 @@ describe('@event messages', function () {
   });
 
   it('should encode RECON with a non-empty body', function () {
-    var envelope = new proto.EventMessage('node_uri', 'lane_uri', 'via_uri', [{a: 1}, 'foo']);
-    assert.same(envelope.encode(), recon.parse('@event(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}'));
+    var envelope = new proto.EventMessage('node_uri', 'lane_uri', [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@event(node: node_uri, lane: lane_uri) {a:1,foo}'));
   });
 
-  it('should decode RECON with named headers and an empty body', function () {
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@event(node: node_uri, lane: lane_uri) {a:1,foo}');
+    assert(envelope.isEventMessage);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, [{a: 1}, 'foo']);
+  });
+
+  it('should decode RECON with named headers', function () {
     var envelope = proto.parse('@event(node: node_uri, lane: lane_uri)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, undefined);
     assert.same(envelope.body, []);
   });
 
-  it('should decode RECON with named headers and a non-empty body', function () {
-    var envelope = proto.parse('@event(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}');
-    assert(envelope.isEventMessage);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
-    assert.same(envelope.body, [{a: 1}, 'foo']);
-  });
-
-  it('should decode RECON with positional headers and an empty body', function () {
+  it('should decode RECON with positional headers', function () {
     var envelope = proto.parse('@event(node_uri, lane_uri)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, undefined);
     assert.same(envelope.body, []);
   });
 
-  it('should decode RECON with positional headers and a non-empty body', function () {
-    var envelope = proto.parse('@event(node_uri, lane_uri, via_uri) {a:1,foo}');
-    assert(envelope.isEventMessage);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
-    assert.same(envelope.body, [{a: 1}, 'foo']);
-  });
-
   it('should decode RECON with named and unknown headers', function () {
-    var envelope = proto.parse('@event(node: node_uri, lane: lane_uri, via: via_uri, foo: bar)');
+    var envelope = proto.parse('@event(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
     assert.same(envelope.body, []);
   });
 
   it('should decode RECON with positional and unknown headers', function () {
-    var envelope = proto.parse('@event(node_uri, lane_uri, via_uri, bar)');
+    var envelope = proto.parse('@event(node_uri, lane_uri, bar)');
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
     assert.same(envelope.body, []);
   });
 
@@ -138,12 +137,25 @@ describe('@event messages', function () {
 
 describe('@command messages', function () {
   it('should have header properties', function () {
-    var envelope = new proto.CommandMessage('node_uri', 'lane_uri', [], true);
+    var envelope = new proto.CommandMessage('node_uri', 'lane_uri', true);
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, []);
     assert.same(envelope.body, true);
+  });
+
+  it('should support readdressing', function () {
+    var envelope1 = new proto.CommandMessage('node1_uri', 'lane1_uri', true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isCommandMessage);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isCommandMessage);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.body, true);
   });
 
   it('should encode RECON with an empty body', function () {
@@ -152,61 +164,47 @@ describe('@command messages', function () {
   });
 
   it('should encode RECON with a non-empty body', function () {
-    var envelope = new proto.CommandMessage('node_uri', 'lane_uri', 'via_uri', [{a: 1}, 'foo']);
-    assert.same(envelope.encode(), recon.parse('@command(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}'));
+    var envelope = new proto.CommandMessage('node_uri', 'lane_uri', [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@command(node: node_uri, lane: lane_uri) {a:1,foo}'));
   });
 
-  it('should decode RECON with named headers and an empty body', function () {
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@command(node: node_uri, lane: lane_uri) {a:1,foo}');
+    assert(envelope.isCommandMessage);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, [{a: 1}, 'foo']);
+  });
+
+  it('should decode RECON with named headers', function () {
     var envelope = proto.parse('@command(node: node_uri, lane: lane_uri)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, undefined);
     assert.same(envelope.body, []);
   });
 
-  it('should decode RECON with named headers and a non-empty body', function () {
-    var envelope = proto.parse('@command(node: node_uri, lane: lane_uri, via: via_uri) {a:1,foo}');
-    assert(envelope.isCommandMessage);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
-    assert.same(envelope.body, [{a: 1}, 'foo']);
-  });
-
-  it('should decode RECON with positional headers and an empty body', function () {
+  it('should decode RECON with positional headers', function () {
     var envelope = proto.parse('@command(node_uri, lane_uri)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, undefined);
     assert.same(envelope.body, []);
   });
 
-  it('should decode RECON with positional headers and a non-empty body', function () {
-    var envelope = proto.parse('@command(node_uri, lane_uri, via_uri) {a:1,foo}');
-    assert(envelope.isCommandMessage);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
-    assert.same(envelope.body, [{a: 1}, 'foo']);
-  });
-
   it('should decode RECON with named and unknown headers', function () {
-    var envelope = proto.parse('@command(node: node_uri, lane: lane_uri, via: via_uri, foo: bar)');
+    var envelope = proto.parse('@command(node: node_uri, lane: lane_uri, foo: bar)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
     assert.same(envelope.body, []);
   });
 
   it('should decode RECON with positional and unknown headers', function () {
-    var envelope = proto.parse('@command(node_uri, lane_uri, via_uri, bar)');
+    var envelope = proto.parse('@command(node_uri, lane_uri, bar)');
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.via, 'via_uri');
     assert.same(envelope.body, []);
   });
 
@@ -217,31 +215,246 @@ describe('@command messages', function () {
 });
 
 
-describe('@sync requests', function () {
+describe('@link requests', function () {
   it('should have header properties', function () {
-    var envelope = new proto.SyncRequest('node_uri', 'lane_uri', 1.0);
-    assert(envelope.isSyncRequest);
+    var envelope = new proto.LinkRequest('node_uri', 'lane_uri', 0.5, true);
+    assert(envelope.isLinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 1.0);
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, true);
   });
 
-  it('should encode RECON with a prio header', function () {
-    var envelope = new proto.SyncRequest('node_uri', 'lane_uri', 1.0);
-    assert.same(envelope.encode(), recon.parse('@sync(node: node_uri, lane: lane_uri, prio: 1.0)'));
+  it('should support readdressing', function () {
+    var envelope1 = new proto.LinkRequest('node1_uri', 'lane1_uri', 0.5, true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isLinkRequest);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.prio, 0.5);
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isLinkRequest);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.prio, 0.5);
+    assert.same(envelope3.body, true);
   });
 
-  it('should encode RECON without a prio header', function () {
-    var envelope = new proto.SyncRequest('node_uri', 'lane_uri');
-    assert.same(envelope.encode(), recon.parse('@sync(node: node_uri, lane: lane_uri)'));
+  it('should encode RECON with an empty body', function () {
+    var envelope = new proto.LinkRequest('node_uri', 'lane_uri', 0.5);
+    assert.same(envelope.encode(), recon.parse('@link(node: node_uri, lane: lane_uri, prio: 0.5)'));
+    envelope = new proto.LinkRequest('node_uri', 'lane_uri');
+    assert.same(envelope.encode(), recon.parse('@link(node: node_uri, lane: lane_uri)'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.LinkRequest('node_uri', 'lane_uri', 0.5, [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@link(node: node_uri, lane: lane_uri, prio: 0.5) {a:1,foo}'));
+    envelope = new proto.LinkRequest('node_uri', 'lane_uri', 0.0, [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@link(node: node_uri, lane: lane_uri) {a:1,foo}'));
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@link(node: node_uri, lane: lane_uri, prio: 0.5) {a:1,foo}');
+    assert(envelope.isLinkRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, [{a: 1}, 'foo']);
   });
 
   it('should decode RECON with named headers', function () {
-    var envelope = proto.parse('@sync(node: node_uri, lane: lane_uri, prio: 1.0)');
+    var envelope = proto.parse('@link(node: node_uri, lane: lane_uri, prio: 0.5)');
+    assert(envelope.isLinkRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with positional headers', function () {
+    var envelope = proto.parse('@link(node_uri, lane_uri)');
+    assert(envelope.isLinkRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.0);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with named and unknown headers', function () {
+    var envelope = proto.parse('@link(node: node_uri, lane: lane_uri, foo: bar, prio: 0.5)');
+    assert(envelope.isLinkRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with positional and unknown headers', function () {
+    var envelope = proto.parse('@link(node_uri, lane_uri, bar)');
+    assert(envelope.isLinkRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.0);
+    assert.same(envelope.body, []);
+  });
+
+  it('should not decode RECON with missing headers', function () {
+    var envelope = proto.parse('@link()');
+    assert(envelope === undefined);
+  });
+});
+
+
+describe('@linked responses', function () {
+  it('should have header properties', function () {
+    var envelope = new proto.LinkedResponse('node_uri', 'lane_uri', 1.0, true);
+    assert(envelope.isLinkedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 1.0);
+    assert.same(envelope.body, true);
+  });
+
+  it('should support readdressing', function () {
+    var envelope1 = new proto.LinkedResponse('node1_uri', 'lane1_uri', 0.5, true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isLinkedResponse);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.prio, 0.5);
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isLinkedResponse);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.prio, 0.5);
+    assert.same(envelope3.body, true);
+  });
+
+  it('should encode RECON with an empty body', function () {
+    var envelope = new proto.LinkedResponse('node_uri', 'lane_uri', 0.5);
+    assert.same(envelope.encode(), recon.parse('@linked(node: node_uri, lane: lane_uri, prio: 0.5)'));
+    envelope = new proto.LinkedResponse('node_uri', 'lane_uri');
+    assert.same(envelope.encode(), recon.parse('@linked(node: node_uri, lane: lane_uri)'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.LinkedResponse('node_uri', 'lane_uri', 0.5, [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@linked(node: node_uri, lane: lane_uri, prio: 0.5) {a:1,foo}'));
+    envelope = new proto.LinkedResponse('node_uri', 'lane_uri', 0.0, [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@linked(node: node_uri, lane: lane_uri) {a:1,foo}'));
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@linked(node: node_uri, lane: lane_uri, prio: 0.5) {a:1,foo}');
+    assert(envelope.isLinkedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, [{a: 1}, 'foo']);
+  });
+
+  it('should decode RECON with named headers', function () {
+    var envelope = proto.parse('@linked(node: node_uri, lane: lane_uri, prio: 0.5)');
+    assert(envelope.isLinkedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with positional headers', function () {
+    var envelope = proto.parse('@linked(node_uri, lane_uri)');
+    assert(envelope.isLinkedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.0);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with named and unknown headers', function () {
+    var envelope = proto.parse('@linked(node: node_uri, lane: lane_uri, foo: bar, prio: 0.5)');
+    assert(envelope.isLinkedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with positional and unknown headers', function () {
+    var envelope = proto.parse('@linked(node_uri, lane_uri, bar)');
+    assert(envelope.isLinkedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.0);
+    assert.same(envelope.body, []);
+  });
+
+  it('should not decode RECON with missing headers', function () {
+    var envelope = proto.parse('@linked()');
+    assert(envelope === undefined);
+  });
+});
+
+
+describe('@sync requests', function () {
+  it('should have header properties', function () {
+    var envelope = new proto.SyncRequest('node_uri', 'lane_uri', 1.0, true);
     assert(envelope.isSyncRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
     assert.same(envelope.prio, 1.0);
+    assert.same(envelope.body, true);
+  });
+
+  it('should support readdressing', function () {
+    var envelope1 = new proto.SyncRequest('node1_uri', 'lane1_uri', 0.5, true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isSyncRequest);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.prio, 0.5);
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isSyncRequest);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.prio, 0.5);
+    assert.same(envelope3.body, true);
+  });
+
+  it('should encode RECON with an empty body', function () {
+    var envelope = new proto.SyncRequest('node_uri', 'lane_uri', 0.5);
+    assert.same(envelope.encode(), recon.parse('@sync(node: node_uri, lane: lane_uri, prio: 0.5)'));
+    envelope = new proto.SyncRequest('node_uri', 'lane_uri');
+    assert.same(envelope.encode(), recon.parse('@sync(node: node_uri, lane: lane_uri)'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.SyncRequest('node_uri', 'lane_uri', 0.5, [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@sync(node: node_uri, lane: lane_uri, prio: 0.5) {a:1,foo}'));
+    envelope = new proto.SyncRequest('node_uri', 'lane_uri', 0.0, [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@sync(node: node_uri, lane: lane_uri) {a:1,foo}'));
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@sync(node: node_uri, lane: lane_uri, prio: 0.5) {a:1,foo}');
+    assert(envelope.isSyncRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, [{a: 1}, 'foo']);
+  });
+
+  it('should decode RECON with named headers', function () {
+    var envelope = proto.parse('@sync(node: node_uri, lane: lane_uri, prio: 0.5)');
+    assert(envelope.isSyncRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, []);
   });
 
   it('should decode RECON with positional headers', function () {
@@ -250,14 +463,16 @@ describe('@sync requests', function () {
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
     assert.same(envelope.prio, 0.0);
+    assert.same(envelope.body, []);
   });
 
   it('should decode RECON with named and unknown headers', function () {
-    var envelope = proto.parse('@sync(node: node_uri, lane: lane_uri, foo: bar)');
+    var envelope = proto.parse('@sync(node: node_uri, lane: lane_uri, foo: bar, prio: 0.5)');
     assert(envelope.isSyncRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 0.0);
+    assert.same(envelope.prio, 0.5);
+    assert.same(envelope.body, []);
   });
 
   it('should decode RECON with positional and unknown headers', function () {
@@ -266,6 +481,7 @@ describe('@sync requests', function () {
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
     assert.same(envelope.prio, 0.0);
+    assert.same(envelope.body, []);
   });
 
   it('should not decode RECON with missing headers', function () {
@@ -277,15 +493,43 @@ describe('@sync requests', function () {
 
 describe('@synced responses', function () {
   it('should have header properties', function () {
-    var envelope = new proto.SyncedResponse('node_uri', 'lane_uri');
+    var envelope = new proto.SyncedResponse('node_uri', 'lane_uri', true);
     assert(envelope.isSyncedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, true);
   });
 
-  it('should encode RECON', function () {
+  it('should support readdressing', function () {
+    var envelope1 = new proto.SyncedResponse('node1_uri', 'lane1_uri', true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isSyncedResponse);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isSyncedResponse);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.body, true);
+  });
+
+  it('should encode RECON with an empty body', function () {
     var envelope = new proto.SyncedResponse('node_uri', 'lane_uri');
     assert.same(envelope.encode(), recon.parse('@synced(node: node_uri, lane: lane_uri)'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.SyncedResponse('node_uri', 'lane_uri', [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@synced(node: node_uri, lane: lane_uri) {a:1,foo}'));
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@synced(node: node_uri, lane: lane_uri) {a:1,foo}');
+    assert(envelope.isSyncedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, [{a: 1}, 'foo']);
   });
 
   it('should decode RECON with named headers', function () {
@@ -323,133 +567,45 @@ describe('@synced responses', function () {
 });
 
 
-describe('@link requests', function () {
-  it('should have header properties', function () {
-    var envelope = new proto.LinkRequest('node_uri', 'lane_uri', 1.0);
-    assert(envelope.isLinkRequest);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 1.0);
-  });
-
-  it('should encode RECON with a prio header', function () {
-    var envelope = new proto.LinkRequest('node_uri', 'lane_uri', 1.0);
-    assert.same(envelope.encode(), recon.parse('@link(node: node_uri, lane: lane_uri, prio: 1.0)'));
-  });
-
-  it('should encode RECON without a prio header', function () {
-    var envelope = new proto.LinkRequest('node_uri', 'lane_uri');
-    assert.same(envelope.encode(), recon.parse('@link(node: node_uri, lane: lane_uri)'));
-  });
-
-  it('should decode RECON with named headers', function () {
-    var envelope = proto.parse('@link(node: node_uri, lane: lane_uri, prio: 1.0)');
-    assert(envelope.isLinkRequest);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 1.0);
-  });
-
-  it('should decode RECON with positional headers', function () {
-    var envelope = proto.parse('@link(node_uri, lane_uri)');
-    assert(envelope.isLinkRequest);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 0.0);
-  });
-
-  it('should decode RECON with named and unknown headers', function () {
-    var envelope = proto.parse('@link(node: node_uri, lane: lane_uri, foo: bar)');
-    assert(envelope.isLinkRequest);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 0.0);
-  });
-
-  it('should decode RECON with positional and unknown headers', function () {
-    var envelope = proto.parse('@link(node_uri, lane_uri, bar)');
-    assert(envelope.isLinkRequest);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 0.0);
-  });
-
-  it('should not decode RECON with missing headers', function () {
-    var envelope = proto.parse('@link()');
-    assert(envelope === undefined);
-  });
-});
-
-
-describe('@linked responses', function () {
-  it('should have header properties', function () {
-    var envelope = new proto.LinkedResponse('node_uri', 'lane_uri', 1.0);
-    assert(envelope.isLinkedResponse);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 1.0);
-  });
-
-  it('should encode RECON with a prio header', function () {
-    var envelope = new proto.LinkedResponse('node_uri', 'lane_uri', 1.0);
-    assert.same(envelope.encode(), recon.parse('@linked(node: node_uri, lane: lane_uri, prio: 1.0)'));
-  });
-
-  it('should encode RECON without a prio header', function () {
-    var envelope = new proto.LinkedResponse('node_uri', 'lane_uri');
-    assert.same(envelope.encode(), recon.parse('@linked(node: node_uri, lane: lane_uri)'));
-  });
-
-  it('should decode RECON with named headers', function () {
-    var envelope = proto.parse('@linked(node: node_uri, lane: lane_uri, prio: 1.0)');
-    assert(envelope.isLinkedResponse);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 1.0);
-  });
-
-  it('should decode RECON with positional headers', function () {
-    var envelope = proto.parse('@linked(node_uri, lane_uri)');
-    assert(envelope.isLinkedResponse);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 0.0);
-  });
-
-  it('should decode RECON with named and unknown headers', function () {
-    var envelope = proto.parse('@linked(node: node_uri, lane: lane_uri, foo: bar)');
-    assert(envelope.isLinkedResponse);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 0.0);
-  });
-
-  it('should decode RECON with positional and unknown headers', function () {
-    var envelope = proto.parse('@linked(node_uri, lane_uri, bar)');
-    assert(envelope.isLinkedResponse);
-    assert.same(envelope.node, 'node_uri');
-    assert.same(envelope.lane, 'lane_uri');
-    assert.same(envelope.prio, 0.0);
-  });
-
-  it('should not decode RECON with missing headers', function () {
-    var envelope = proto.parse('@linked()');
-    assert(envelope === undefined);
-  });
-});
-
-
 describe('@unlink requests', function () {
   it('should have header properties', function () {
-    var envelope = new proto.UnlinkRequest('node_uri', 'lane_uri');
+    var envelope = new proto.UnlinkRequest('node_uri', 'lane_uri', true);
     assert(envelope.isUnlinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, true);
   });
 
-  it('should encode RECON', function () {
+  it('should support readdressing', function () {
+    var envelope1 = new proto.UnlinkRequest('node1_uri', 'lane1_uri', true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isUnlinkRequest);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isUnlinkRequest);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.body, true);
+  });
+
+  it('should encode RECON with an empty body', function () {
     var envelope = new proto.UnlinkRequest('node_uri', 'lane_uri');
     assert.same(envelope.encode(), recon.parse('@unlink(node: node_uri, lane: lane_uri)'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.UnlinkRequest('node_uri', 'lane_uri', [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@unlink(node: node_uri, lane: lane_uri) {a:1,foo}'));
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@unlink(node: node_uri, lane: lane_uri) {a:1,foo}');
+    assert(envelope.isUnlinkRequest);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, [{a: 1}, 'foo']);
   });
 
   it('should decode RECON with named headers', function () {
@@ -489,15 +645,43 @@ describe('@unlink requests', function () {
 
 describe('@unlinked responses', function () {
   it('should have header properties', function () {
-    var envelope = new proto.UnlinkedResponse('node_uri', 'lane_uri');
+    var envelope = new proto.UnlinkedResponse('node_uri', 'lane_uri', true);
     assert(envelope.isUnlinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, true);
   });
 
-  it('should encode RECON', function () {
+  it('should support readdressing', function () {
+    var envelope1 = new proto.UnlinkedResponse('node1_uri', 'lane1_uri', true);
+    var envelope2 = envelope1.withAddress('node2_uri', 'lane2_uri');
+    assert(envelope2.isUnlinkedResponse);
+    assert.same(envelope2.node, 'node2_uri');
+    assert.same(envelope2.lane, 'lane2_uri');
+    assert.same(envelope2.body, true);
+    var envelope3 = envelope2.withAddress();
+    assert(envelope3.isUnlinkedResponse);
+    assert.same(envelope3.node, 'node2_uri');
+    assert.same(envelope3.lane, 'lane2_uri');
+    assert.same(envelope3.body, true);
+  });
+
+  it('should encode RECON with an empty body', function () {
     var envelope = new proto.UnlinkedResponse('node_uri', 'lane_uri');
     assert.same(envelope.encode(), recon.parse('@unlinked(node: node_uri, lane: lane_uri)'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.UnlinkedResponse('node_uri', 'lane_uri', [{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@unlinked(node: node_uri, lane: lane_uri) {a:1,foo}'));
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@unlinked(node: node_uri, lane: lane_uri) {a:1,foo}');
+    assert(envelope.isUnlinkedResponse);
+    assert.same(envelope.node, 'node_uri');
+    assert.same(envelope.lane, 'lane_uri');
+    assert.same(envelope.body, [{a: 1}, 'foo']);
   });
 
   it('should decode RECON with named headers', function () {
