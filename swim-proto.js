@@ -13,6 +13,10 @@ function decode(record) {
     case '@synced': return SyncedResponse.decode(record);
     case '@unlink': return UnlinkRequest.decode(record);
     case '@unlinked': return UnlinkedResponse.decode(record);
+    case '@auth': return AuthRequest.decode(record);
+    case '@authed': return AuthedResponse.decode(record);
+    case '@deauth': return DeauthRequest.decode(record);
+    case '@deauthed': return DeauthedResponse.decode(record);
   }
 }
 
@@ -41,6 +45,10 @@ Object.defineProperty(Envelope.prototype, 'isSyncRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isSyncedResponse', {value: false});
 Object.defineProperty(Envelope.prototype, 'isUnlinkRequest', {value: false});
 Object.defineProperty(Envelope.prototype, 'isUnlinkedResponse', {value: false});
+Object.defineProperty(Envelope.prototype, 'isAuthRequest', {value: false});
+Object.defineProperty(Envelope.prototype, 'isAuthedResponse', {value: false});
+Object.defineProperty(Envelope.prototype, 'isDeauthRequest', {value: false});
+Object.defineProperty(Envelope.prototype, 'isDeauthedResponse', {value: false});
 
 
 function RequestEnvelope() {
@@ -56,7 +64,7 @@ function ResponseEnvelope() {
 }
 ResponseEnvelope.prototype = Object.create(Envelope.prototype);
 ResponseEnvelope.prototype.constructor = ResponseEnvelope;
-Object.defineProperty(RequestEnvelope.prototype, 'isResponse', {value: true});
+Object.defineProperty(ResponseEnvelope.prototype, 'isResponse', {value: true});
 
 
 function MessageEnvelope() {
@@ -64,7 +72,7 @@ function MessageEnvelope() {
 }
 MessageEnvelope.prototype = Object.create(Envelope.prototype);
 MessageEnvelope.prototype.constructor = MessageEnvelope;
-Object.defineProperty(RequestEnvelope.prototype, 'isMessage', {value: true});
+Object.defineProperty(MessageEnvelope.prototype, 'isMessage', {value: true});
 
 
 function EventMessage(node, lane, body) {
@@ -364,6 +372,70 @@ UnlinkedResponse.decode = function (record) {
 };
 
 
+function AuthRequest(body) {
+  RequestEnvelope.call(this);
+  this.body = body;
+}
+AuthRequest.prototype = Object.create(RequestEnvelope.prototype);
+AuthRequest.prototype.constructor = AuthRequest;
+Object.defineProperty(AuthRequest.prototype, 'isAuthRequest', {value: true});
+AuthRequest.prototype.encode = function () {
+  return recon.concat({'@auth': null}, this.body);
+};
+AuthRequest.decode = function (record) {
+  var body = recon.tail(record);
+  return new AuthRequest(body);
+};
+
+
+function AuthedResponse(body) {
+  ResponseEnvelope.call(this);
+  this.body = body;
+}
+AuthedResponse.prototype = Object.create(ResponseEnvelope.prototype);
+AuthedResponse.prototype.constructor = AuthedResponse;
+Object.defineProperty(AuthedResponse.prototype, 'isAuthedResponse', {value: true});
+AuthedResponse.prototype.encode = function () {
+  return recon.concat({'@authed': null}, this.body);
+};
+AuthedResponse.decode = function (record) {
+  var body = recon.tail(record);
+  return new AuthedResponse(body);
+};
+
+
+function DeauthRequest(body) {
+  RequestEnvelope.call(this);
+  this.body = body;
+}
+DeauthRequest.prototype = Object.create(RequestEnvelope.prototype);
+DeauthRequest.prototype.constructor = DeauthRequest;
+Object.defineProperty(DeauthRequest.prototype, 'isDeauthRequest', {value: true});
+DeauthRequest.prototype.encode = function () {
+  return recon.concat({'@deauth': null}, this.body);
+};
+DeauthRequest.decode = function (record) {
+  var body = recon.tail(record);
+  return new DeauthRequest(body);
+};
+
+
+function DeauthedResponse(body) {
+  ResponseEnvelope.call(this);
+  this.body = body;
+}
+DeauthedResponse.prototype = Object.create(ResponseEnvelope.prototype);
+DeauthedResponse.prototype.constructor = DeauthedResponse;
+Object.defineProperty(DeauthedResponse.prototype, 'isDeauthedResponse', {value: true});
+DeauthedResponse.prototype.encode = function () {
+  return recon.concat({'@deauthed': null}, this.body);
+};
+DeauthedResponse.decode = function (record) {
+  var body = recon.tail(record);
+  return new DeauthedResponse(body);
+};
+
+
 exports.decode = decode;
 exports.encode = encode;
 exports.parse = parse;
@@ -380,4 +452,8 @@ exports.LinkRequest = LinkRequest;
 exports.LinkedResponse = LinkedResponse;
 exports.UnlinkRequest = UnlinkRequest;
 exports.UnlinkedResponse = UnlinkedResponse;
+exports.AuthRequest = AuthRequest;
+exports.AuthedResponse = AuthedResponse;
+exports.DeauthRequest = DeauthRequest;
+exports.DeauthedResponse = DeauthedResponse;
 exports.config = config;

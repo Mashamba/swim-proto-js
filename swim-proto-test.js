@@ -58,6 +58,7 @@ describe('Envelope transcoding', function () {
 describe('@event messages', function () {
   it('should have header properties', function () {
     var envelope = new proto.EventMessage('node_uri', 'lane_uri', true);
+    assert(envelope.isMessage);
     assert(envelope.isEventMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -138,6 +139,7 @@ describe('@event messages', function () {
 describe('@command messages', function () {
   it('should have header properties', function () {
     var envelope = new proto.CommandMessage('node_uri', 'lane_uri', true);
+    assert(envelope.isMessage);
     assert(envelope.isCommandMessage);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -218,6 +220,7 @@ describe('@command messages', function () {
 describe('@link requests', function () {
   it('should have header properties', function () {
     var envelope = new proto.LinkRequest('node_uri', 'lane_uri', 0.5, true);
+    assert(envelope.isRequest);
     assert(envelope.isLinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -310,6 +313,7 @@ describe('@link requests', function () {
 describe('@linked responses', function () {
   it('should have header properties', function () {
     var envelope = new proto.LinkedResponse('node_uri', 'lane_uri', 1.0, true);
+    assert(envelope.isResponse);
     assert(envelope.isLinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -402,6 +406,7 @@ describe('@linked responses', function () {
 describe('@sync requests', function () {
   it('should have header properties', function () {
     var envelope = new proto.SyncRequest('node_uri', 'lane_uri', 1.0, true);
+    assert(envelope.isRequest);
     assert(envelope.isSyncRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -494,6 +499,7 @@ describe('@sync requests', function () {
 describe('@synced responses', function () {
   it('should have header properties', function () {
     var envelope = new proto.SyncedResponse('node_uri', 'lane_uri', true);
+    assert(envelope.isResponse);
     assert(envelope.isSyncedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -570,6 +576,7 @@ describe('@synced responses', function () {
 describe('@unlink requests', function () {
   it('should have header properties', function () {
     var envelope = new proto.UnlinkRequest('node_uri', 'lane_uri', true);
+    assert(envelope.isRequest);
     assert(envelope.isUnlinkRequest);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -646,6 +653,7 @@ describe('@unlink requests', function () {
 describe('@unlinked responses', function () {
   it('should have header properties', function () {
     var envelope = new proto.UnlinkedResponse('node_uri', 'lane_uri', true);
+    assert(envelope.isResponse);
     assert(envelope.isUnlinkedResponse);
     assert.same(envelope.node, 'node_uri');
     assert.same(envelope.lane, 'lane_uri');
@@ -715,5 +723,133 @@ describe('@unlinked responses', function () {
   it('should not decode RECON with missing headers', function () {
     var envelope = proto.parse('@unlinked()');
     assert(envelope === undefined);
+  });
+});
+
+
+describe('@auth requests', function () {
+  it('should have header properties', function () {
+    var envelope = new proto.AuthRequest('body');
+    assert(envelope.isRequest);
+    assert(envelope.isAuthRequest);
+    assert.same(envelope.body, 'body');
+  });
+
+  it('should encode RECON with an empty body', function () {
+    var envelope = new proto.AuthRequest();
+    assert.same(envelope.encode(), recon.parse('@auth'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.AuthRequest([{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@auth {a:1,foo}'));
+  });
+
+  it('should decode RECON with an empty body', function () {
+    var envelope = proto.parse('@auth');
+    assert(envelope.isAuthRequest);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@auth {a:1,foo}');
+    assert(envelope.isAuthRequest);
+    assert.same(envelope.body, [{a: 1}, 'foo']);
+  });
+});
+
+
+describe('@authed responses', function () {
+  it('should have header properties', function () {
+    var envelope = new proto.AuthedResponse('body');
+    assert(envelope.isResponse);
+    assert(envelope.isAuthedResponse);
+    assert.same(envelope.body, 'body');
+  });
+
+  it('should encode RECON with an empty body', function () {
+    var envelope = new proto.AuthedResponse();
+    assert.same(envelope.encode(), recon.parse('@authed'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.AuthedResponse([{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@authed {a:1,foo}'));
+  });
+
+  it('should decode RECON with an empty body', function () {
+    var envelope = proto.parse('@authed');
+    assert(envelope.isAuthedResponse);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@authed {a:1,foo}');
+    assert(envelope.isAuthedResponse);
+    assert.same(envelope.body, [{a: 1}, 'foo']);
+  });
+});
+
+
+describe('@deauth requests', function () {
+  it('should have header properties', function () {
+    var envelope = new proto.DeauthRequest('body');
+    assert(envelope.isRequest);
+    assert(envelope.isDeauthRequest);
+    assert.same(envelope.body, 'body');
+  });
+
+  it('should encode RECON with an empty body', function () {
+    var envelope = new proto.DeauthRequest();
+    assert.same(envelope.encode(), recon.parse('@deauth'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.DeauthRequest([{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@deauth {a:1,foo}'));
+  });
+
+  it('should decode RECON with an empty body', function () {
+    var envelope = proto.parse('@deauth');
+    assert(envelope.isDeauthRequest);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@deauth {a:1,foo}');
+    assert(envelope.isDeauthRequest);
+    assert.same(envelope.body, [{a: 1}, 'foo']);
+  });
+});
+
+
+describe('@deauthed responses', function () {
+  it('should have header properties', function () {
+    var envelope = new proto.DeauthedResponse('body');
+    assert(envelope.isResponse);
+    assert(envelope.isDeauthedResponse);
+    assert.same(envelope.body, 'body');
+  });
+
+  it('should encode RECON with an empty body', function () {
+    var envelope = new proto.DeauthedResponse();
+    assert.same(envelope.encode(), recon.parse('@deauthed'));
+  });
+
+  it('should encode RECON with a non-empty body', function () {
+    var envelope = new proto.DeauthedResponse([{a: 1}, 'foo']);
+    assert.same(envelope.encode(), recon.parse('@deauthed {a:1,foo}'));
+  });
+
+  it('should decode RECON with an empty body', function () {
+    var envelope = proto.parse('@deauthed');
+    assert(envelope.isDeauthedResponse);
+    assert.same(envelope.body, []);
+  });
+
+  it('should decode RECON with a non-empty body', function () {
+    var envelope = proto.parse('@deauthed {a:1,foo}');
+    assert(envelope.isDeauthedResponse);
+    assert.same(envelope.body, [{a: 1}, 'foo']);
   });
 });

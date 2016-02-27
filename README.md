@@ -120,3 +120,25 @@ Remove an existing message subscription identified by a
 >> @unlink([node:] <node_uri>, [lane:] <lane_uri>)
 << @unlinked([node:] <node_uri>, [lane:] <lane_uri>)
 ```
+
+### @auth
+
+Authorizes the connection with credentials contained in `<body>`.
+
+#### Examples
+
+```
+>> @auth <body>
+<< @authed <body>
+```
+
+### @deauth
+
+De-authorizes the connection.
+
+#### Examples
+
+```
+>> @deauth <body>
+<< @deauthed <body>
+```
