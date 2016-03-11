@@ -1,6 +1,6 @@
 {
   "name": "swim-proto-js",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Swim Protocol JavaScript Implementation",
   "homepage": "https://github.com/swimit/swim-proto-js",
   "author": "Chris Sachs <chris@swim.it>",
@@ -26,7 +26,7 @@
     "web"
   ],
   "dependencies": {
-    "recon-js": "^0.3.8"
+    "recon-js": "^0.3.9"
   },
   "devDependencies": {
     "browserify": "^13.0.0",

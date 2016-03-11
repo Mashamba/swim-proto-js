@@ -1,7 +1,7 @@
 'use strict';
 
 var config = require('./config.json');
-var recon = require('recon-js');
+var recon = global.recon || require('recon-js');
 
 function decode(record) {
   switch (recon.tag(record)) {
